@@ -901,9 +901,7 @@
 
     <!-- Quick Chips -->
     <div class="quick-chips" id="quick-chips-wrap" style="display:none">
-      <div class="chip" onclick="startChat('被项目架空，不知道自己还重不重要')">被项目架空，不知道自己还重不重要</div>
-      <div class="chip" onclick="startChat('今天开会被当众否掉，很难受')">今天开会被当众否掉，很难受</div>
-      <div class="chip" onclick="startChat('绩效又被压了，开始怀疑自己')">绩效又被压了，开始怀疑自己</div>
+      <!-- AI 动态生成 -->
     </div>
 
     <!-- Input -->
@@ -1261,6 +1259,47 @@ function confirmName(skip) {
   showNormalHome();
 }
 
+async function generateChips() {
+  const wrap = document.getElementById('quick-chips-wrap');
+  wrap.innerHTML = '<div class="chip" style="opacity:0.4;pointer-events:none">生成中…</div>';
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 200,
+        messages: [
+          {
+            role: 'system',
+            content: '你是一个情绪场景生成器。生成3个真实的、具体的情绪困扰场景，每个场景用一句话描述（10-18个字），第一人称，口语化，贴近职场/生活真实感受。直接输出JSON数组，不要任何解释或代码块，格式：["场景1","场景2","场景3"]'
+          },
+          { role: 'user', content: '生成3个今天可能遇到的情绪场景' }
+        ]
+      })
+    });
+    const data = await response.json();
+    const text = data.choices?.[0]?.message?.content?.trim() || '';
+    const chips = JSON.parse(text);
+    wrap.innerHTML = '';
+    chips.forEach(label => {
+      const el = document.createElement('div');
+      el.className = 'chip';
+      el.textContent = label;
+      el.onclick = () => startChat(label);
+      wrap.appendChild(el);
+    });
+  } catch(e) {
+    // fallback to static chips
+    wrap.innerHTML = `
+      <div class="chip" onclick="startChat('今天开会被当众否掉，很难受')">今天开会被当众否掉，很难受</div>
+      <div class="chip" onclick="startChat('绩效又被压了，开始怀疑自己')">绩效又被压了，开始怀疑自己</div>
+      <div class="chip" onclick="startChat('被项目架空，不知道自己还重不重要')">被项目架空，不知道自己还重不重要</div>
+    `;
+  }
+}
+
 function showNormalHome() {
   const setup = document.getElementById('nameSetup');
   const greeting = document.getElementById('homeGreeting');
@@ -1278,6 +1317,7 @@ function showNormalHome() {
     greeting.style.opacity = '0';
     greeting.style.transition = 'opacity 0.4s ease';
     chips.style.display = 'flex';
+    generateChips();
     inputWrap.style.display = 'flex';
     // ⑥ 名字确认后才显示新建对话按钮
     document.getElementById('newChatBtn').style.visibility = 'visible';
