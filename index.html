@@ -57,14 +57,8 @@
   }
   .screen.active { opacity: 1; pointer-events: all; }
 
-  /* Status bar - 用作刘海安全区占位 */
-  .statusbar {
-    height: max(env(safe-area-inset-top, 0px), 44px);
-    padding: 0;
-    flex-shrink: 0; z-index: 10;
-    overflow: hidden;
-  }
-  .statusbar-time, .statusbar-icons { display: none; }
+  /* Status bar - 完全隐藏 */
+  .statusbar { display: none; }
 
   /* ===== HOME SCREEN ===== */
   #home {
