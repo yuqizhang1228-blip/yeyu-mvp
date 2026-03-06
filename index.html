@@ -1,0 +1,1888 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>夜屿 Night Isle — MVP Prototype</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #121620;
+    --surface: #1E2330;
+    --surface2: rgba(255,255,255,0.05);
+    --border: rgba(255,255,255,0.08);
+    --text-primary: #E2E8F0;
+    --text-secondary: #94A3B8;
+    --glow-primary: #FF9F68;
+    --glow-secondary: #FF7E5F;
+    --indigo: #6366F1;
+    --radius-card: 24px;
+    --radius-bubble: 20px;
+    --radius-pill: 999px;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #0a0c12;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'PingFang SC', 'Noto Serif SC', sans-serif;
+    overflow: hidden;
+  }
+
+  /* Phone Shell */
+  .phone {
+    width: 393px; height: 852px;
+    background: var(--bg);
+    border-radius: 52px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 0 0 1px rgba(255,255,255,0.1), 0 40px 120px rgba(0,0,0,0.8), 0 0 80px rgba(255,159,104,0.08);
+  }
+  /* 让快捷卡片区域可以横滑，不被phone裁切 */
+  #home {
+    overflow-x: clip;
+    overflow-y: hidden;
+  }
+
+  /* Screens */
+  .screen {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.4s ease;
+    overflow-x: hidden;
+  }
+  .screen.active { opacity: 1; pointer-events: all; }
+
+  /* Status bar */
+  .statusbar {
+    height: 54px; padding: 16px 28px 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0; z-index: 10;
+  }
+  .statusbar-time { font-size: 15px; font-weight: 600; color: var(--text-primary); letter-spacing: 0.02em; }
+  .statusbar-icons { display: flex; gap: 6px; align-items: center; }
+  .statusbar-icons span { font-size: 13px; color: var(--text-primary); }
+
+  /* ===== HOME SCREEN ===== */
+  #home {
+    background: radial-gradient(ellipse 60% 40% at 50% 15%, rgba(255,159,104,0.12) 0%, transparent 70%), var(--bg);
+  }
+
+  .home-header {
+    padding: 8px 24px 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .home-date { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.04em; }
+  .icon-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .icon-btn svg { opacity: 0.6; }
+
+  /* Orb area */
+  .orb-area {
+    flex: 1; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding-bottom: 20px;
+  }
+
+  /* First-time name setup */
+  .name-setup {
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+    animation: msgIn 0.5s ease;
+  }
+  .name-setup-wrap {
+    display: flex; gap: 10px; align-items: center;
+  }
+  .name-input {
+    background: var(--surface); border: 1px solid rgba(255,159,104,0.3);
+    border-radius: var(--radius-pill); padding: 12px 20px;
+    font-size: 16px; color: var(--text-primary); outline: none;
+    font-family: inherit; width: 180px; text-align: center;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    letter-spacing: 0.02em;
+  }
+  .name-input::placeholder { color: rgba(148,163,184,0.4); font-size: 14px; }
+  .name-input:focus {
+    border-color: rgba(255,159,104,0.6);
+    box-shadow: 0 0 0 3px rgba(255,159,104,0.1);
+  }
+  .name-confirm-btn {
+    width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 16px rgba(255,159,104,0.35);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .name-confirm-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255,159,104,0.5); }
+  .name-confirm-btn:active { transform: scale(0.95); }
+  .name-skip { font-size: 12px; color: rgba(148,163,184,0.35); cursor: pointer; transition: color 0.2s; }
+  .name-skip:hover { color: rgba(148,163,184,0.6); }
+
+  .orb-wrap {
+    position: relative; width: 140px; height: 140px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 28px;
+  }
+  .orb-glow {
+    position: absolute; inset: -30px;
+    background: radial-gradient(circle, rgba(255,159,104,0.25) 0%, rgba(255,126,95,0.1) 40%, transparent 70%);
+    border-radius: 50%;
+    animation: breathe 5s ease-in-out infinite;
+  }
+  .orb {
+    width: 100px; height: 100px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 40%, #FF7E5F 70%, #E8613A);
+    box-shadow: 0 0 40px rgba(255,159,104,0.5), 0 0 80px rgba(255,159,104,0.2), inset 0 0 20px rgba(255,255,255,0.15);
+    animation: float 4s ease-in-out infinite;
+    position: relative; z-index: 1;
+  }
+  .orb::after {
+    content: ''; position: absolute;
+    top: 15%; left: 20%; width: 30%; height: 20%;
+    background: rgba(255,255,255,0.3);
+    border-radius: 50%; filter: blur(4px);
+  }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); opacity: 0.8; }
+    50% { transform: scale(1.08); opacity: 1; }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+  }
+
+  .home-greeting { font-size: 15px; color: var(--text-secondary); text-align: center; line-height: 1.6; }
+  .home-greeting strong { color: var(--text-primary); font-weight: 500; display: block; font-size: 17px; margin-bottom: 4px; }
+
+  /* Quick chips */
+  .quick-chips {
+    display: flex; gap: 10px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    padding: 0 20px 16px;
+  }
+  .quick-chips::-webkit-scrollbar { display: none; }
+  .chip {
+    flex-shrink: 0; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-card); cursor: pointer;
+    font-size: 13px; color: var(--text-secondary); line-height: 1.5;
+    max-width: 160px; transition: all 0.2s ease;
+  }
+  .chip:hover { border-color: rgba(255,159,104,0.3); color: var(--text-primary); background: rgba(255,159,104,0.05); }
+
+  /* Input area */
+  .input-wrap {
+    padding: 0 20px 16px;
+    display: flex; align-items: flex-end; gap: 10px;
+  }
+  .input-box {
+    flex: 1; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 22px;
+    padding: 14px 18px; font-size: 15px;
+    color: var(--text-primary); outline: none;
+    font-family: inherit; resize: none;
+    min-height: 50px; max-height: 120px;
+    line-height: 1.5; transition: border-color 0.2s;
+  }
+  .input-box::placeholder { color: var(--text-secondary); }
+  .input-box:focus { border-color: rgba(255,159,104,0.4); }
+  .send-btn {
+    width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
+    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 20px rgba(255,159,104,0.4);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .send-btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(255,159,104,0.5); }
+  .send-btn:active { transform: scale(0.95); }
+
+  .disclaimer {
+    text-align: center; font-size: 11px; color: rgba(148,163,184,0.4);
+    padding: 0 28px 32px; line-height: 1.5;
+  }
+
+  /* ===== DRAWER ===== */
+  .drawer-overlay {
+    position: absolute; inset: 0; z-index: 50;
+    background: rgba(0,0,0,0); pointer-events: none;
+    transition: background 0.35s ease;
+  }
+  .drawer-overlay.open {
+    background: rgba(0,0,0,0.55); pointer-events: all;
+    backdrop-filter: blur(2px);
+  }
+  .drawer {
+    position: absolute; top: 0; left: 0; bottom: 0;
+    width: 300px; z-index: 51;
+    background: #161B28;
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    transform: translateX(-100%);
+    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 8px 0 40px rgba(0,0,0,0.5);
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    padding: 56px 24px 20px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .drawer-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 50%, #FF7E5F);
+    box-shadow: 0 0 16px rgba(255,159,104,0.35);
+    margin-bottom: 12px;
+  }
+  .drawer-username { font-size: 16px; color: var(--text-primary); font-weight: 500; }
+  .drawer-meta { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+
+  .drawer-body { flex: 1; overflow-y: auto; scrollbar-width: none; padding: 8px 0; }
+  .drawer-body::-webkit-scrollbar { display: none; }
+
+  .drawer-section-title {
+    font-size: 11px; color: rgba(148,163,184,0.45);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 16px 24px 8px; font-weight: 600;
+  }
+
+  /* History items */
+  .history-item {
+    padding: 12px 24px; cursor: pointer;
+    transition: background 0.15s ease;
+    border-radius: 0;
+  }
+  .history-item:hover { background: rgba(255,255,255,0.04); }
+  .history-item-title {
+    font-size: 13px; color: var(--text-primary);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    margin-bottom: 4px; line-height: 1.4;
+  }
+  .history-item-meta {
+    font-size: 11px; color: var(--text-secondary);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .history-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--glow-primary); opacity: 0.6; flex-shrink: 0;
+  }
+
+  /* 行动卡片汇总入口 */
+  .card-summary-entry {
+    margin: 4px 16px 16px; padding: 14px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; cursor: pointer;
+    display: flex; align-items: center; justify-content: space-between;
+    transition: border-color 0.2s ease;
+  }
+  .card-summary-entry:hover { border-color: rgba(255,159,104,0.3); }
+  .card-summary-left { display: flex; align-items: center; gap: 12px; }
+  .card-summary-icon {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: rgba(255,159,104,0.08); border: 1px solid rgba(255,159,104,0.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; color: var(--glow-primary); flex-shrink: 0;
+  }
+  .card-summary-main { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+  .card-summary-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* Action card items */
+  .card-item {
+    margin: 4px 16px; padding: 14px 16px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; cursor: pointer;
+    transition: all 0.25s ease;
+  }
+  .card-item:hover { border-color: rgba(255,159,104,0.25); background: rgba(255,159,104,0.04); }
+  .card-item.expanded { border-color: rgba(255,159,104,0.3); background: rgba(255,159,104,0.04); }
+  .card-item-action {
+    font-size: 13px; color: var(--text-primary); line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .card-item-meta {
+    font-size: 11px; color: var(--text-secondary);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-item-status {
+    font-size: 10px; padding: 2px 8px; border-radius: 99px;
+    background: rgba(74,222,128,0.1); color: #4ade80;
+    border: 1px solid rgba(74,222,128,0.2);
+  }
+  .card-item-status.pending {
+    background: rgba(148,163,184,0.08); color: var(--text-secondary);
+    border-color: rgba(148,163,184,0.15);
+  }
+
+  /* Expanded detail */
+  .card-item-detail {
+    display: none; margin-top: 14px;
+    padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .card-item.expanded .card-item-detail { display: block; }
+  .card-detail-label {
+    font-size: 10px; color: rgba(148,163,184,0.4);
+    letter-spacing: 0.06em; margin-bottom: 5px;
+  }
+  .card-detail-thought {
+    font-size: 12px; color: var(--text-secondary); line-height: 1.55;
+    padding: 8px 10px; background: rgba(255,255,255,0.03);
+    border-radius: 10px; border-left: 2px solid rgba(255,159,104,0.25);
+    margin-bottom: 12px;
+  }
+  .card-detail-reframe {
+    font-size: 12px; color: rgba(226,232,240,0.65); line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  /* 状态切换按钮 */
+  .card-status-toggle {
+    display: flex; gap: 8px;
+  }
+  .card-toggle-btn {
+    flex: 1; padding: 8px; border-radius: 10px;
+    font-size: 12px; cursor: pointer; font-family: inherit;
+    border: 1px solid var(--border); background: transparent;
+    color: var(--text-secondary); transition: all 0.2s ease;
+  }
+  .card-toggle-btn.active-pending {
+    border-color: rgba(148,163,184,0.3); color: var(--text-primary);
+    background: rgba(148,163,184,0.08);
+  }
+  .card-toggle-btn.active-done {
+    border-color: rgba(74,222,128,0.35); color: #4ade80;
+    background: rgba(74,222,128,0.08);
+  }
+
+  /* Settings rows */
+  .settings-item {
+    padding: 13px 24px; cursor: pointer;
+    display: flex; align-items: center; gap: 14px;
+    transition: background 0.15s ease;
+  }
+  .settings-item:hover { background: rgba(255,255,255,0.04); }
+  .settings-icon {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: var(--surface); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .settings-label { font-size: 14px; color: var(--text-primary); flex: 1; }
+  .settings-value { font-size: 12px; color: var(--text-secondary); }
+  .settings-arrow { opacity: 0.3; }
+
+  .drawer-footer {
+    padding: 16px 24px 36px;
+    border-top: 1px solid var(--border); flex-shrink: 0;
+  }
+  .drawer-version { font-size: 11px; color: rgba(148,163,184,0.3); text-align: center; }
+
+  /* ===== CHAT SCREEN ===== */
+  #chat {
+    background: radial-gradient(ellipse 50% 30% at 50% 0%, rgba(99,102,241,0.1) 0%, transparent 60%), var(--bg);
+  }
+
+  .chat-header {
+    padding: 8px 20px 12px;
+    display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .back-btn {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; flex-shrink: 0;
+  }
+  .chat-orb-mini {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 50%, #FF7E5F);
+    box-shadow: 0 0 12px rgba(255,159,104,0.4);
+    flex-shrink: 0;
+  }
+  .chat-title { font-size: 15px; color: var(--text-primary); font-weight: 500; }
+  .chat-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+
+  /* Messages */
+  .messages {
+    flex: 1; overflow-y: auto; padding: 20px 20px 12px;
+    display: flex; flex-direction: column; gap: 16px;
+    scrollbar-width: none;
+  }
+  .messages::-webkit-scrollbar { display: none; }
+
+  .msg { display: flex; flex-direction: column; max-width: 80%; animation: msgIn 0.3s ease; }
+  .msg.user { align-self: flex-end; align-items: flex-end; }
+  .msg.ai { align-self: flex-start; align-items: flex-start; }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .bubble {
+    padding: 12px 16px; border-radius: var(--radius-bubble);
+    font-size: 15px; line-height: 1.65; color: var(--text-primary);
+  }
+  .msg.user .bubble {
+    background: var(--surface); border: 1px solid var(--border);
+    border-bottom-right-radius: 6px;
+  }
+  .msg.ai .bubble {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+    border-bottom-left-radius: 6px; backdrop-filter: blur(10px);
+  }
+  .msg-time { font-size: 11px; color: rgba(148,163,184,0.4); margin-top: 4px; padding: 0 4px; }
+
+  /* Thinking indicator — 大形象版 */
+  .thinking {
+    display: flex; align-items: center; gap: 12px;
+    padding: 4px 0; animation: msgIn 0.3s ease;
+    align-self: flex-start;
+  }
+  .thinking-orb {
+    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 50%, #FF7E5F);
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(255,159,104,0.3); }
+    50% { box-shadow: 0 0 20px rgba(255,159,104,0.7), 0 0 40px rgba(255,159,104,0.2); }
+  }
+  .thinking-text { font-size: 13px; color: var(--text-secondary); }
+  .dots span {
+    animation: blink 1.2s ease-in-out infinite;
+    display: inline-block;
+  }
+  .dots span:nth-child(2) { animation-delay: 0.2s; }
+  .dots span:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
+
+  /* 打字机光标 */
+  .typewriter-cursor {
+    display: inline-block; width: 2px; height: 1em;
+    background: rgba(255,159,104,0.7); margin-left: 2px;
+    vertical-align: text-bottom;
+    animation: cursorBlink 0.8s ease-in-out infinite;
+  }
+  @keyframes cursorBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  /* Collect buttons */
+  .option-label {
+    font-size: 13px; color: var(--text-secondary);
+    line-height: 1.6; margin-bottom: 10px;
+    padding: 0 2px;
+    transition: opacity 0.2s ease;
+  }
+  .collect-btns {
+    display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0;
+    animation: msgIn 0.3s ease 0.1s both;
+  }
+  .collect-btn {
+    padding: 9px 16px; border-radius: var(--radius-pill);
+    background: var(--surface); border: 1px solid var(--border);
+    font-size: 13px; color: var(--text-secondary); cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .collect-btn:hover { border-color: rgba(255,159,104,0.5); color: var(--glow-primary); background: rgba(255,159,104,0.05); }
+
+  /* Action Card */
+  .action-card-wrap {
+    margin: 8px 20px 0; animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .action-card {
+    background: var(--surface); border: 1px solid rgba(255,159,104,0.2);
+    border-radius: var(--radius-card); padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,159,104,0.05);
+  }
+  .action-card-label {
+    font-size: 11px; color: var(--glow-primary); letter-spacing: 0.1em;
+    text-transform: uppercase; margin-bottom: 14px; font-weight: 600;
+  }
+  /* 区块小标签 */
+  .card-section-label {
+    font-size: 11px; color: rgba(148,163,184,0.45);
+    letter-spacing: 0.06em; margin-bottom: 6px;
+  }
+  .action-card-thought {
+    font-size: 14px; color: var(--text-secondary); line-height: 1.6;
+    padding: 10px 12px; background: rgba(255,255,255,0.03);
+    border-radius: 12px; margin-bottom: 14px; border-left: 2px solid rgba(255,159,104,0.3);
+  }
+  .action-card-new {
+    font-size: 13px; color: rgba(226,232,240,0.75); line-height: 1.7;
+    margin-bottom: 16px; padding: 0 2px;
+  }
+  /* 行动部分视觉权重提升 */
+  .action-items-wrap { margin-bottom: 4px; }
+  .action-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    font-size: 15px; color: var(--text-primary); line-height: 1.6; font-weight: 500;
+    padding: 11px 14px; background: rgba(255,159,104,0.07);
+    border-radius: 12px; margin-bottom: 8px;
+    border: 1px solid rgba(255,159,104,0.12);
+  }
+  .action-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--glow-primary); margin-top: 8px; flex-shrink: 0;
+  }
+  .action-card-btns { display: flex; gap: 10px; margin-top: 16px; }
+  .btn-accept {
+    flex: 1; padding: 12px; border-radius: var(--radius-pill);
+    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
+    border: none; color: #fff; font-size: 14px; font-weight: 600;
+    cursor: pointer; font-family: inherit;
+    box-shadow: 0 4px 16px rgba(255,159,104,0.3);
+    transition: all 0.2s ease;
+  }
+  .btn-accept:hover { box-shadow: 0 6px 20px rgba(255,159,104,0.5); transform: translateY(-1px); }
+  .btn-more {
+    flex: 1; padding: 12px; border-radius: var(--radius-pill);
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text-secondary); font-size: 14px; cursor: pointer; font-family: inherit;
+    transition: all 0.2s ease;
+  }
+  .btn-more:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
+  /* Collapsed card bar */
+  .card-bar {
+    margin: 0 20px 8px; padding: 11px 16px;
+    background: rgba(255,159,104,0.07); border: 1px solid rgba(255,159,104,0.2);
+    border-radius: 14px; display: none;
+    align-items: center; justify-content: space-between;
+    cursor: pointer; transition: all 0.2s ease;
+    animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1);
+  }
+  .card-bar:hover { background: rgba(255,159,104,0.12); border-color: rgba(255,159,104,0.35); }
+  .card-bar.show { display: flex; }
+  .card-bar-left { display: flex; align-items: center; gap: 8px; }
+  .card-bar-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--glow-primary);
+    box-shadow: 0 0 6px rgba(255,159,104,0.6);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .card-bar-text { font-size: 13px; color: var(--glow-primary); }
+  .card-bar-chevron {
+    transition: transform 0.25s ease; opacity: 0.6;
+  }
+  .card-bar-chevron.open { transform: rotate(180deg); }
+
+  /* Saved bar */
+  .saved-bar {
+    margin: 0 20px 8px; padding: 12px 16px;
+    background: rgba(255,159,104,0.1); border: 1px solid rgba(255,159,104,0.2);
+    border-radius: 14px; align-items: center; gap: 10px;
+    animation: slideUp 0.3s ease; display: none;
+  }
+  .saved-bar.show { display: flex; }
+  .saved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--glow-primary); flex-shrink: 0; }
+  .saved-text { font-size: 13px; color: var(--text-secondary); }
+  .saved-text strong { color: var(--glow-primary); }
+
+  /* Chat input */
+  .chat-input-wrap {
+    padding: 8px 20px 28px; flex-shrink: 0;
+    display: flex; align-items: flex-end; gap: 10px;
+  }
+
+  /* Resolve buttons */
+  .resolve-row {
+    display: none; padding: 4px 20px 12px; gap: 10px;
+    flex-shrink: 0;
+  }
+  .resolve-row.show { display: flex; }
+  .resolve-btn {
+    flex: 1; padding: 10px; border-radius: var(--radius-pill);
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--text-secondary); font-size: 13px; cursor: pointer; font-family: inherit;
+    transition: all 0.2s ease; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .resolve-btn.resolved { border-color: rgba(255,159,104,0.4); color: var(--glow-primary); background: rgba(255,159,104,0.05); }
+  .resolve-btn.unresolved { border-color: rgba(99,102,241,0.4); color: #a5b4fc; background: rgba(99,102,241,0.05); }
+
+  /* 卡片已保存飞点动效 */
+  .fly-dot {
+    position: fixed;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--glow-primary);
+    box-shadow: 0 0 8px rgba(255,159,104,0.9);
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ===== SETTINGS PAGES ===== */
+  .settings-page {
+    position: absolute; inset: 0;
+    background: var(--bg);
+    z-index: 300;
+    display: flex; flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .settings-page.open { transform: translateX(0); }
+
+  .settings-page-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 8px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    padding-top: calc(env(safe-area-inset-top) + 8px);
+  }
+  .settings-page-title {
+    font-size: 16px; font-weight: 500; color: var(--text-primary);
+  }
+
+  .settings-page-body {
+    flex: 1; overflow-y: auto; padding: 24px 20px 40px;
+    scrollbar-width: none;
+  }
+  .settings-page-body::-webkit-scrollbar { display: none; }
+
+  .settings-group-label {
+    font-size: 11px; color: rgba(148,163,184,0.45);
+    letter-spacing: 0.08em; text-transform: uppercase;
+    margin-bottom: 8px; padding: 0 4px;
+  }
+
+  .settings-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px; overflow: hidden;
+  }
+  .settings-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .settings-row:last-child { border-bottom: none; }
+  .settings-row:active { background: rgba(255,255,255,0.04); }
+
+  .settings-row-main { flex: 1; }
+  .settings-row-title { font-size: 15px; color: var(--text-primary); }
+  .settings-row-desc {
+    font-size: 12px; color: var(--text-secondary);
+    line-height: 1.6; margin-top: 3px;
+  }
+  .settings-row-badge {
+    font-size: 11px; color: rgba(74,222,128,0.8);
+    background: rgba(74,222,128,0.08);
+    border: 1px solid rgba(74,222,128,0.2);
+    padding: 3px 8px; border-radius: 20px;
+  }
+  .settings-row-value {
+    font-size: 14px; color: var(--text-secondary);
+  }
+
+  /* Toggle switch */
+  .toggle-wrap { cursor: pointer; }
+  .toggle-track {
+    width: 44px; height: 26px; border-radius: 13px;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid var(--border);
+    position: relative; transition: background 0.25s;
+  }
+  .toggle-track.on {
+    background: rgba(255,159,104,0.8);
+    border-color: rgba(255,159,104,0.4);
+  }
+  .toggle-thumb {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #fff; position: absolute;
+    top: 2px; left: 3px;
+    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+  }
+  .toggle-track.on .toggle-thumb { transform: translateX(18px); }
+
+  /* About page orb */
+  .about-orb-wrap {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 14px;
+    padding: 32px 0 8px;
+  }
+  .about-orb {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 50%, #FF7E5F);
+    box-shadow: 0 0 32px rgba(255,159,104,0.35);
+  }
+  .about-version {
+    font-size: 12px; color: rgba(148,163,184,0.4);
+    letter-spacing: 0.04em;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 0; }
+
+  /* Drawer section header with count */
+  .drawer-section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 20px 8px;
+  }
+  .drawer-section-header .drawer-section-title { padding: 0; }
+  .drawer-section-count {
+    font-size: 12px; color: rgba(148,163,184,0.45);
+  }
+
+  /* View all button */
+  .drawer-view-all {
+    display: flex; align-items: center; justify-content: center; gap: 4px;
+    margin: 4px 20px 16px; padding: 10px;
+    border: 1px dashed rgba(148,163,184,0.15); border-radius: 12px;
+    font-size: 13px; color: rgba(148,163,184,0.5);
+    cursor: pointer; transition: all 0.2s ease;
+  }
+  .drawer-view-all:hover { border-color: rgba(255,159,104,0.3); color: var(--glow-primary); }
+
+  /* List page */
+  .list-page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 8px; flex-shrink: 0;
+  }
+  .list-page-title { font-size: 16px; color: var(--text-primary); font-weight: 500; }
+
+  /* Filter tabs */
+  .list-tabs {
+    display: flex; gap: 8px; padding: 4px 20px 16px; flex-shrink: 0;
+  }
+  .list-tab {
+    padding: 6px 14px; border-radius: var(--radius-pill);
+    font-size: 13px; color: var(--text-secondary);
+    border: 1px solid var(--border); cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .list-tab.active {
+    background: rgba(255,159,104,0.1); border-color: rgba(255,159,104,0.35);
+    color: var(--glow-primary);
+  }
+
+  /* List body */
+  .list-body {
+    flex: 1; overflow-y: auto; padding: 0 20px 28px;
+  }
+  .list-month-label {
+    font-size: 11px; color: rgba(148,163,184,0.4);
+    letter-spacing: 0.06em; padding: 16px 0 8px;
+  }
+
+  /* Full card item */
+  .list-card-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s ease;
+  }
+  .list-card-item:hover { border-color: rgba(255,159,104,0.25); }
+  .list-card-thought {
+    font-size: 12px; color: rgba(148,163,184,0.5); margin-bottom: 6px;
+  }
+  .list-card-action {
+    font-size: 14px; color: var(--text-primary); line-height: 1.55; margin-bottom: 10px;
+  }
+  .list-card-footer {
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .list-card-date { font-size: 12px; color: rgba(148,163,184,0.4); }
+  .list-card-badge {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px;
+  }
+  .list-card-badge.done { background: rgba(74,222,128,0.1); color: #4ade80; }
+  .list-card-badge.pending { background: rgba(148,163,184,0.08); color: rgba(148,163,184,0.6); }
+
+  /* Full history item */
+  .list-history-item {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s ease;
+  }
+  .list-history-item:hover { border-color: rgba(255,159,104,0.25); }
+  .list-history-title {
+    font-size: 14px; color: var(--text-primary); line-height: 1.55; margin-bottom: 8px;
+  }
+  .list-history-footer {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .list-history-tag {
+    font-size: 11px; padding: 3px 8px; border-radius: 20px;
+    background: rgba(148,163,184,0.08); color: rgba(148,163,184,0.6);
+  }
+  .list-card-expand {
+    display: none;
+  }
+  .list-card-item.expanded .list-card-expand {
+    display: block;
+  }
+  .list-card-item.expanded {
+    border-color: rgba(255,159,104,0.3);
+  }
+
+  /* ① Input disabled state during thinking */
+  .chat-input-wrap.thinking-state .input-box {
+    opacity: 0.4; pointer-events: none; transition: opacity 0.2s ease;
+  }
+  .chat-input-wrap.thinking-state .send-btn {
+    opacity: 0.3; pointer-events: none; transition: opacity 0.2s ease;
+  }
+
+  /* ④ Option btn fade-out */
+  @keyframes fadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(-6px); }
+  }
+  .collect-btns.fading { animation: fadeOut 0.2s ease forwards; pointer-events: none; }
+
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- HOME SCREEN -->
+  <div class="screen active" id="home">
+    <div class="statusbar">
+      <span class="statusbar-time">23:15</span>
+      <div class="statusbar-icons">
+        <span>●●●</span>
+        <span>WiFi</span>
+        <span>▮▮▮</span>
+      </div>
+    </div>
+
+    <div class="home-header">
+      <div class="icon-btn" onclick="openDrawer()">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#E2E8F0" stroke-width="1.8" stroke-linecap="round">
+          <line x1="0" y1="1" x2="16" y2="1"/><line x1="0" y1="6" x2="12" y2="6"/><line x1="0" y1="11" x2="16" y2="11"/>
+        </svg>
+      </div>
+      <div class="home-date">2026年3月4日，星期三</div>
+      <div class="icon-btn" onclick="newChat()" title="新建对话" id="newChatBtn" style="visibility:hidden">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="orb-area">
+      <div class="orb-wrap">
+        <div class="orb-glow"></div>
+        <div class="orb"></div>
+      </div>
+
+      <!-- 首次进入：设置名字 -->
+      <div class="name-setup" id="nameSetup">
+        <div class="home-greeting">
+          <strong>你好，我是夜屿</strong>
+          在开始之前，你想让我怎么称呼你？
+        </div>
+        <div class="name-setup-wrap">
+          <input class="name-input" id="nameInput" type="text" placeholder="你的名字"
+            maxlength="10"
+            onkeydown="if(event.key==='Enter') confirmName()" />
+          <button class="name-confirm-btn" onclick="confirmName()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </button>
+        </div>
+        <div class="name-skip" onclick="confirmName('跳过')">跳过</div>
+      </div>
+
+      <!-- 正常首页 -->
+      <div class="home-greeting" id="homeGreeting" style="display:none">
+        <strong id="greetingText">此刻，和你的心一起流淌</strong>
+        今天想聊点什么？
+      </div>
+    </div>
+
+    <!-- Quick Chips -->
+    <div class="quick-chips" id="quick-chips-wrap" style="display:none">
+      <div class="chip" onclick="startChat('被项目架空，不知道自己还重不重要')">被项目架空，不知道自己还重不重要</div>
+      <div class="chip" onclick="startChat('今天开会被当众否掉，很难受')">今天开会被当众否掉，很难受</div>
+      <div class="chip" onclick="startChat('绩效又被压了，开始怀疑自己')">绩效又被压了，开始怀疑自己</div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-wrap" id="home-input-wrap" style="display:none">
+      <textarea class="input-box" id="homeInput" placeholder="此刻想和我聊点什么…" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFromHome()}"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      <button class="send-btn" onclick="sendFromHome()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="disclaimer">本功能无法代替专业心理咨询或医学治疗</div>
+  </div>
+
+  <!-- CHAT SCREEN -->
+  <div class="screen" id="chat">
+    <div class="statusbar">
+      <span class="statusbar-time" id="chatTime">23:15</span>
+      <div class="statusbar-icons"><span>●●●</span><span>WiFi</span></div>
+    </div>
+
+    <div class="chat-header">
+      <div class="back-btn" onclick="goHome()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="chat-orb-mini" id="chatOrb"></div>
+      <div>
+        <div class="chat-title">夜屿</div>
+        <div class="chat-subtitle" id="chatStatus">正在陪伴</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <!-- 折叠卡片条：吸附在输入框上方，不阻断对话 -->
+    <div class="card-bar" id="cardBar" onclick="toggleCardExpand()">
+      <div class="card-bar-left">
+        <div class="card-bar-dot"></div>
+        <div class="card-bar-text">已为你保存一张行动卡片 · 点击查看</div>
+      </div>
+      <svg class="card-bar-chevron" id="cardBarChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FF9F68" stroke-width="2.5" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>
+    </div>
+
+    <!-- 展开的完整卡片 -->
+    <div class="action-card-wrap" id="actionCardWrap" style="display:none">
+      <div class="action-card">
+        <div class="action-card-label">✦ 行动卡片</div>
+
+        <div class="card-section-label">你脑子里的那句话</div>
+        <div class="action-card-thought">「被否的是我这个人，不只是方案」</div>
+
+        <div class="card-section-label">换个角度看</div>
+        <div class="action-card-new">今天被否的是这个方案，不是你整个人。方案可以迭代，但你对问题的判断力是真实的。</div>
+
+        <div class="card-section-label">这周可以试试</div>
+        <div class="action-items-wrap">
+          <div class="action-item"><div class="action-dot"></div><div>发一封邮件，用一句话写下你对这个问题的真实判断</div></div>
+          <div class="action-item"><div class="action-dot"></div><div>找一个你信任的人，花15分钟聊聊今天发生了什么</div></div>
+        </div>
+
+        <div class="action-card-btns">
+          <button class="btn-accept" onclick="collapseCard()">继续聊</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="saved-bar" id="savedBar" style="display:none"></div>
+    <div class="resolve-row" id="resolveRow" style="display:none"></div>
+
+    <div class="chat-input-wrap" id="chatInputWrap">
+      <textarea class="input-box" id="chatInput" placeholder="说点什么…" rows="1"
+        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
+        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+      <button class="send-btn" onclick="sendMsg()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+          <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+        </svg>
+      </button>
+    </div>
+
+  </div>
+  <div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+
+  <!-- DRAWER -->
+  <div class="drawer" id="drawer">
+    <div class="drawer-header">
+      <div class="drawer-avatar"></div>
+      <div class="drawer-username" id="drawerUsername">Peter</div>
+      <div class="drawer-meta">已梳理 3 次情绪 · 2 张行动卡片</div>
+    </div>
+
+    <div class="drawer-body">
+
+      <!-- 行动卡片汇总入口 -->
+      <div class="drawer-section-title">行动卡片</div>
+      <div class="card-summary-entry" onclick="closeDrawer(); showListPage('cards')">
+        <div class="card-summary-left">
+          <div class="card-summary-icon">✦</div>
+          <div>
+            <div class="card-summary-main">12 张</div>
+            <div class="card-summary-sub">3 张进行中</div>
+          </div>
+        </div>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" opacity="0.4"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <!-- 设置 -->
+      <div class="drawer-section-title" style="margin-top:4px">设置</div>
+
+      <div class="settings-item" onclick="showSettings('settingsPrivacy')">
+        <div class="settings-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+        <div class="settings-label">隐私与数据</div>
+        <svg class="settings-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="settings-item" onclick="showSettings('settingsReminder')">
+        <div class="settings-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></div>
+        <div class="settings-label">提醒设置</div>
+        <div class="settings-value">关闭</div>
+        <svg class="settings-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+      <div class="settings-item" onclick="showSettings('settingsAbout')">
+        <div class="settings-icon"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></div>
+        <div class="settings-label">关于夜屿</div>
+        <svg class="settings-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </div>
+
+      <div class="drawer-section-title" style="margin-top:4px">历史对话</div>
+
+      <div class="history-item" onclick="closeDrawer(); startChat('被项目架空，不知道自己还重不重要')">
+        <div class="history-item-title">被项目架空，不知道自己还重不重要</div>
+        <div class="history-item-meta"><span>3月2日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('今天开会被当众否掉，很难受')">
+        <div class="history-item-title">今天开会被当众否掉，很难受</div>
+        <div class="history-item-meta"><span>2月28日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('绩效又被压了，开始怀疑自己')">
+        <div class="history-item-title">绩效又被压了，开始怀疑自己</div>
+        <div class="history-item-meta"><span>2月20日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('感觉团队里没人在乎我说什么')">
+        <div class="history-item-title">感觉团队里没人在乎我说什么</div>
+        <div class="history-item-meta"><span>2月14日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('新来的同事升得比我快，心里很不是滋味')">
+        <div class="history-item-title">新来的同事升得比我快，心里很不是滋味</div>
+        <div class="history-item-meta"><span>2月5日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('跟领导沟通完感觉更差了')">
+        <div class="history-item-title">跟领导沟通完感觉更差了</div>
+        <div class="history-item-meta"><span>1月30日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('又一次被排除在重要会议之外')">
+        <div class="history-item-title">又一次被排除在重要会议之外</div>
+        <div class="history-item-meta"><span>1月22日</span></div>
+      </div>
+      <div class="history-item" onclick="closeDrawer(); startChat('年终总结写不下去，什么都觉得不够好')">
+        <div class="history-item-title">年终总结写不下去，什么都觉得不够好</div>
+        <div class="history-item-meta"><span>1月15日</span></div>
+      </div>
+
+    </div>
+
+    <div class="drawer-footer">
+      <div class="drawer-version">夜屿 Night Isle · v0.1.0 MVP</div>
+      <div class="drawer-version" style="margin-top:8px; cursor:pointer; opacity:0.4;" onclick="resetName()">↺ 重置首次体验（演示用）</div>
+    </div>
+  </div>
+
+  <!-- LIST PAGE -->
+  <div class="screen" id="listPage">
+    <div class="statusbar">
+      <span id="listPageTime">09:41</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <svg width="15" height="11" viewBox="0 0 15 11" fill="#E2E8F0"><rect x="0" y="4" width="3" height="7" rx="1"/><rect x="4" y="2.5" width="3" height="8.5" rx="1"/><rect x="8" y="1" width="3" height="10" rx="1"/><rect x="12" y="0" width="3" height="11" rx="1"/></svg>
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#E2E8F0" stroke-width="1.5"><path d="M1 3.5C3.8 1.2 7 0 8 0s4.2 1.2 7 3.5"/><path d="M3 6c1.4-1.3 3-2 5-2s3.6.7 5 2"/><path d="M5 8.5C6 7.8 7 7.5 8 7.5s2 .3 3 1"/><circle cx="8" cy="11" r="1" fill="#E2E8F0"/></svg>
+        <svg width="25" height="12" viewBox="0 0 25 12" fill="none"><rect x="0.5" y="0.5" width="21" height="11" rx="3.5" stroke="#E2E8F0" stroke-opacity="0.35"/><rect x="2" y="2" width="16" height="8" rx="2" fill="#E2E8F0"/><path d="M23 4.5v3a1.5 1.5 0 0 0 0-3z" fill="#E2E8F0" fill-opacity="0.4"/></svg>
+      </div>
+    </div>
+    <div class="list-page-header">
+      <div class="back-btn" onclick="hideListPage()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="list-page-title" id="listPageTitle">行动卡片</div>
+      <div style="width:32px"></div>
+    </div>
+    <div class="list-tabs" id="listTabs">
+      <div class="list-tab active" onclick="switchTab(this,'all')">全部</div>
+      <div class="list-tab" onclick="switchTab(this,'pending')">进行中</div>
+      <div class="list-tab" onclick="switchTab(this,'done')">已完成</div>
+    </div>
+    <div class="list-body" id="listBody"></div>
+  </div>
+
+  <!-- SETTINGS: 隐私与数据 -->
+  <div class="settings-page" id="settingsPrivacy">
+    <div class="settings-page-header">
+      <div class="back-btn" onclick="hideSettings('settingsPrivacy')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="settings-page-title">隐私与数据</div>
+    </div>
+    <div class="settings-page-body">
+      <div class="settings-group-label">数据存储</div>
+      <div class="settings-block">
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title">存储位置</div>
+            <div class="settings-row-desc">全部数据存储在你的设备本地，不上传至任何服务器</div>
+          </div>
+          <div class="settings-row-badge">本地</div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title">对话内容</div>
+            <div class="settings-row-desc">你的对话内容不会被用于模型训练或任何商业用途</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group-label" style="margin-top:28px">AI 服务</div>
+      <div class="settings-block">
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title">对话处理</div>
+            <div class="settings-row-desc">对话内容会发送至 Anthropic Claude API 进行处理，受其隐私政策约束</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group-label" style="margin-top:28px">数据管理</div>
+      <div class="settings-block">
+        <div class="settings-row" onclick="confirmClearData()">
+          <div class="settings-row-main">
+            <div class="settings-row-title" style="color:#F87171">清除所有数据</div>
+            <div class="settings-row-desc">删除本地所有对话记录与行动卡片，无法恢复</div>
+          </div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#F87171" stroke-width="2" opacity="0.6"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS: 提醒设置 -->
+  <div class="settings-page" id="settingsReminder">
+    <div class="settings-page-header">
+      <div class="back-btn" onclick="hideSettings('settingsReminder')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="settings-page-title">提醒设置</div>
+    </div>
+    <div class="settings-page-body">
+      <div class="settings-block">
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title">每日陪伴提醒</div>
+            <div class="settings-row-desc">在你设定的时间发送一条轻提醒</div>
+          </div>
+          <div class="toggle-wrap" onclick="toggleReminder(this)">
+            <div class="toggle-track">
+              <div class="toggle-thumb"></div>
+            </div>
+          </div>
+        </div>
+        <div class="settings-row" id="reminderTimeRow" style="opacity:0.3; pointer-events:none">
+          <div class="settings-row-main">
+            <div class="settings-row-title">提醒时间</div>
+          </div>
+          <div class="settings-row-value" id="reminderTimeValue">21:00</div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" opacity="0.4"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+      <div class="settings-group-label" style="margin-top:28px">提醒文案</div>
+      <div class="settings-block">
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title" style="font-size:13px; color:var(--text-secondary); font-style:italic">「今天有什么想聊的吗」</div>
+            <div class="settings-row-desc" style="margin-top:6px">每天一条，不催你，只是在</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS: 关于夜屿 -->
+  <div class="settings-page" id="settingsAbout">
+    <div class="settings-page-header">
+      <div class="back-btn" onclick="hideSettings('settingsAbout')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </div>
+      <div class="settings-page-title">关于夜屿</div>
+    </div>
+    <div class="settings-page-body">
+      <div class="about-orb-wrap">
+        <div class="about-orb"></div>
+        <div class="about-version">夜屿 Night Isle · v0.1.0 MVP</div>
+      </div>
+      <div class="settings-block" style="margin-top:24px">
+        <div class="settings-row">
+          <div class="settings-row-main">
+            <div class="settings-row-title">产品理念</div>
+            <div class="settings-row-desc" style="margin-top:8px; line-height:1.8">夜屿不是要解决你的问题，而是陪你在深夜把那句憋着的话说出来。<br><br>基于认知行为疗法（CBT），每次对话帮你找到那个最刺的念头，然后轻轻地换个角度看。</div>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group-label" style="margin-top:28px">其他</div>
+      <div class="settings-block">
+        <div class="settings-row">
+          <div class="settings-row-main"><div class="settings-row-title">反馈与建议</div></div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" opacity="0.4"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-main"><div class="settings-row-title">隐私政策</div></div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" opacity="0.4"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+        <div class="settings-row">
+          <div class="settings-row-main"><div class="settings-row-title">用户协议</div></div>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" opacity="0.4"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function newChat() {
+  const input = document.getElementById('homeInput');
+  input.value = '';
+  input.style.height = 'auto';
+  input.focus();
+}
+
+// 用户名状态（模拟MMKV本地存储）
+let userName = localStorage.getItem('yeyu_username') || '';
+
+function initHome() {
+  if (userName) {
+    showNormalHome();
+  } else {
+    document.getElementById('nameSetup').style.display = 'flex';
+    document.getElementById('homeGreeting').style.display = 'none';
+    document.getElementById('quick-chips-wrap').style.display = 'none';
+    document.getElementById('home-input-wrap').style.display = 'none';
+    setTimeout(() => document.getElementById('nameInput').focus(), 400);
+  }
+}
+
+function confirmName(skip) {
+  const input = document.getElementById('nameInput');
+  const name = skip === '跳过' ? '' : input.value.trim();
+  userName = name || '你';
+  localStorage.setItem('yeyu_username', userName);
+  showNormalHome();
+}
+
+function showNormalHome() {
+  const setup = document.getElementById('nameSetup');
+  const greeting = document.getElementById('homeGreeting');
+  const chips = document.getElementById('quick-chips-wrap');
+  const inputWrap = document.getElementById('home-input-wrap');
+
+  // 淡出设置，淡入正常首页
+  setup.style.transition = 'opacity 0.3s ease';
+  setup.style.opacity = '0';
+  setTimeout(() => {
+    setup.style.display = 'none';
+    const greetName = userName === '你' ? '' : `，${userName}`;
+    document.getElementById('greetingText').textContent = `此刻${greetName}，和你的心一起流淌`;
+    greeting.style.display = 'block';
+    greeting.style.opacity = '0';
+    greeting.style.transition = 'opacity 0.4s ease';
+    chips.style.display = 'flex';
+    inputWrap.style.display = 'flex';
+    // ⑥ 名字确认后才显示新建对话按钮
+    document.getElementById('newChatBtn').style.visibility = 'visible';
+    setTimeout(() => { greeting.style.opacity = '1'; }, 50);
+  }, 300);
+
+  // 更新抽屉用户名
+  document.getElementById('drawerUsername').textContent = userName === '你' ? '匿名用户' : userName;
+}
+
+function openDrawer() {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawerOverlay').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawerOverlay').classList.remove('open');
+}
+
+function showSettings(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function hideSettings(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function toggleReminder(wrap) {
+  const track = wrap.querySelector('.toggle-track');
+  const timeRow = document.getElementById('reminderTimeRow');
+  const isOn = track.classList.toggle('on');
+  timeRow.style.opacity = isOn ? '1' : '0.3';
+  timeRow.style.pointerEvents = isOn ? 'auto' : 'none';
+}
+
+function confirmClearData() {
+  if (confirm('确认清除所有本地数据？\n包括所有对话记录和行动卡片，无法恢复。')) {
+    localStorage.clear();
+    location.reload();
+  }
+}
+
+// 每条消息结构：
+//   { type: 'ai', text }            → AI说话
+//   { type: 'options', items, next } → 选项按钮，next是回调key
+//   { type: 'transition', text }    → 阶段转场轻提示
+//   { type: 'card' }                → 触发行动卡片折叠条
+//   { type: 'closing' }             → 触发收尾二选一
+
+// ─── 对话历史 ─────────────────────────────────────────────────
+let conversationHistory = [];
+let cardGenerated = false;
+
+const SYSTEM_PROMPT = `你是夜屿（Isla），一个温暖、安静的AI情绪陪伴助手。你帮助用户梳理情绪，运用认知行为疗法（CBT）框架，引导他们识别自动化思维，找到新的视角，给出可执行的小行动。
+
+【对话风格】
+- 简短、真实，每次回复控制在100字以内
+- 不急于给建议，先充分倾听
+- 用问题引导，不用教导
+- 语气像一个懂心理的朋友，不是治疗师
+- 不说"我理解你的感受"这类套话
+- 每次只问一个问题
+
+【对话节奏】
+1. 先接住情绪，共情，问一个深入问题
+2. 通过2-4轮问答，帮用户找到那句"自动念头"——脑子里最刺的那句话
+3. 温和挑战这个念头，提供另一种视角
+4. 自然收束，整理卡片
+
+【生成行动卡片的时机】
+当对话已经完成了情绪探索、找到了自动念头、给出了新视角（通常5-8轮之后），按以下格式输出：
+
+第一行：一句自然的收束语，针对这次对话内容，温暖但不煽情。不要用固定句式，根据这次聊的内容来写。例如："今晚能想到这里，已经够了。" 或 "你刚才说的那句话，值得记下来。"
+
+紧接着输出卡片JSON：
+<card>{"thought":"用户的自动念头，用第一人称加引号，如「今天被否说明我整个人都不行」","reframe":"换个角度看的一句话，简洁有力","actions":["具体可执行的行动1","具体可执行的行动2"]}</card>
+
+卡片只生成一次，生成后不再重复。`;
+
+async function callAI(userMessage) {
+  conversationHistory.push({ role: 'user', content: userMessage });
+
+  addThinking();
+
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 1000,
+        messages: [
+          { role: 'system', content: SYSTEM_PROMPT },
+          ...conversationHistory
+        ]
+      })
+    });
+
+    const data = await response.json();
+    const fullText = data.choices?.[0]?.message?.content || '有点走神了，你刚才说什么？';
+
+    conversationHistory.push({ role: 'assistant', content: fullText });
+
+    removeThinking();
+
+    // 检测是否包含卡片
+    const cardMatch = fullText.match(/<card>([\s\S]*?)<\/card>/);
+    if (cardMatch && !cardGenerated) {
+      cardGenerated = true;
+      const displayText = fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim();
+      // 先加过渡文字
+      addTransition('我们来把今晚的整理一下');
+      setTimeout(() => {
+        // 再显示AI的收束语
+        if (displayText) addMsg('ai', displayText);
+        try {
+          const cardData = JSON.parse(cardMatch[1].trim());
+          setTimeout(() => showActionCard(cardData), 800);
+        } catch(e) {
+          setTimeout(() => showActionCard(null), 800);
+        }
+      }, 600);
+    } else {
+      addMsg('ai', fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim());
+    }
+
+  } catch(err) {
+    removeThinking();
+    addMsg('ai', '网络好像有点问题，稍后再试试？');
+  }
+}
+
+
+let isThinking = false;
+let msgCount = 0;
+let currentInput = '';
+
+function now() {
+  const d = new Date();
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+function goHome() {
+  document.getElementById('home').classList.add('active');
+  document.getElementById('chat').classList.remove('active');
+}
+
+function startChat(text) {
+  currentInput = text;
+  conversationHistory = [];
+  cardGenerated = false;
+  msgCount = 0;
+
+  document.getElementById('home').classList.remove('active');
+  document.getElementById('chat').classList.add('active');
+  document.getElementById('chatTime').textContent = now();
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('actionCardWrap').style.display = 'none';
+  document.getElementById('cardBar').classList.remove('show');
+  document.getElementById('chatInputWrap').style.display = 'flex';
+  document.getElementById('chatInput').placeholder = '说点什么…';
+  document.getElementById('chatStatus').textContent = '正在陪伴';
+
+  setTimeout(() => {
+    addMsg('user', text);
+    callAI(text);
+  }, 300);
+}
+
+function sendFromHome() {
+  const input = document.getElementById('homeInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = ''; input.style.height = 'auto';
+  startChat(text);
+}
+
+function sendMsg() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text || isThinking) return;
+  input.value = ''; input.style.height = 'auto';
+  addMsg('user', text);
+  msgCount++;
+  callAI(text);
+}
+
+// ─── UI 工具函数 ─────────────────────────────────────────────
+function showThinkingThen(cb) {
+  addThinking();
+  const delay = 1400 + Math.random() * 600;
+  setTimeout(() => { removeThinking(); cb(); }, delay);
+}
+
+function addMsg(role, text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+  const timeStr = now();
+
+  if (role === 'ai') {
+    div.innerHTML = `<div class="bubble"></div><div class="msg-time">${timeStr}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    const bubble = div.querySelector('.bubble');
+    const lines = text.split('\n');
+    const segments = [];
+    lines.forEach((l, i) => segments.push({ text: l, br: i < lines.length - 1 }));
+    const cursor = document.createElement('span');
+    cursor.className = 'typewriter-cursor';
+    bubble.appendChild(cursor);
+    let lineIdx = 0; let charInLine = 0;
+    const speed = 18;
+    function typeNext() {
+      if (lineIdx >= segments.length) { cursor.remove(); msgs.scrollTop = msgs.scrollHeight; return; }
+      const seg = segments[lineIdx];
+      if (charInLine < seg.text.length) {
+        cursor.insertAdjacentText('beforebegin', seg.text[charInLine]);
+        charInLine++;
+      } else {
+        if (seg.br) cursor.insertAdjacentHTML('beforebegin', '<br>');
+        lineIdx++; charInLine = 0;
+      }
+      msgs.scrollTop = msgs.scrollHeight;
+      setTimeout(typeNext, speed);
+    }
+    setTimeout(typeNext, 60);
+  } else {
+    div.innerHTML = `<div class="bubble">${text.replace(/\n/g,'<br>')}</div><div class="msg-time">${timeStr}</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  }
+}
+
+function addThinking() {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.id = 'thinking'; div.className = 'thinking';
+  div.innerHTML = `<div class="thinking-orb"></div><div class="thinking-text">思考中<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  isThinking = true;
+  document.getElementById('chatInputWrap').classList.add('thinking-state');
+}
+
+function removeThinking() {
+  const t = document.getElementById('thinking');
+  if (t) t.remove();
+  isThinking = false;
+  document.getElementById('chatInputWrap').classList.remove('thinking-state');
+}
+
+function addOptionBtns(options, handler, label) {
+  const msgs = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai';
+  // label引导语
+  if (label) {
+    const l = document.createElement('div');
+    l.className = 'option-label';
+    l.textContent = label;
+    wrap.appendChild(l);
+  }
+  const btns = document.createElement('div');
+  btns.className = 'collect-btns';
+  options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'collect-btn';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      // ④ 选项淡出动画
+      btns.classList.add('fading');
+      if (label) wrap.querySelector('.option-label').style.opacity = '0';
+      setTimeout(() => { wrap.remove(); handler(i); }, 200);
+    };
+    btns.appendChild(btn);
+  });
+  wrap.appendChild(btns);
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function addTransition(text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.style.cssText = 'text-align:center;padding:4px 0 8px;animation:msgIn 0.3s ease';
+  div.innerHTML = `<span style="font-size:12px;color:rgba(148,163,184,0.5);letter-spacing:0.06em">✦ ${text} ✦</span>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function generateHistoryTitle() {
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'deepseek-chat',
+        max_tokens: 60,
+        messages: [
+          { role: 'system', content: '你是一个摘要助手。根据对话内容，生成一句10-16个字的中文标题，概括用户这次的核心困扰。要求：第一人称、口语化、不加标点、直接输出标题本身，不要任何解释。例如：被当众否掉之后很难接受自己' },
+          ...conversationHistory,
+          { role: 'user', content: '请为这段对话生成标题。' }
+        ]
+      })
+    });
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content?.trim() || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function prependHistoryItem(title) {
+  const today = new Date();
+  const dateStr = `${today.getMonth() + 1}月${today.getDate()}日`;
+  const historySection = document.querySelector('#drawer .drawer-body');
+  // 找到历史对话标题后面插入
+  const sectionTitles = historySection.querySelectorAll('.drawer-section-title');
+  let historyTitle = null;
+  sectionTitles.forEach(el => { if (el.textContent === '历史对话') historyTitle = el; });
+  if (!historyTitle) return;
+
+  const item = document.createElement('div');
+  item.className = 'history-item';
+  item.innerHTML = `<div class="history-item-title">${title}</div><div class="history-item-meta"><span>${dateStr}</span></div>`;
+  item.onclick = () => { closeDrawer(); startChat(title); };
+  historyTitle.insertAdjacentElement('afterend', item);
+}
+
+function flyDotToDrawer() {
+  // 起点：折叠条中心
+  const bar = document.getElementById('cardBar');
+  const menuBtn = document.querySelector('#chat .back-btn'); // 左上角返回按钮区域
+  if (!bar) return;
+
+  const barRect = bar.getBoundingClientRect();
+  // 目标：左上角抽屉入口（chat header 左侧）
+  const chatHeader = document.querySelector('.chat-header');
+  const targetRect = chatHeader ? chatHeader.getBoundingClientRect() : { left: 24, top: 60 };
+
+  const startX = barRect.left + barRect.width / 2;
+  const startY = barRect.top + barRect.height / 2;
+  const endX = targetRect.left + 20;
+  const endY = targetRect.top + 20;
+
+  const dot = document.createElement('div');
+  dot.className = 'fly-dot';
+  dot.style.left = startX + 'px';
+  dot.style.top = startY + 'px';
+  document.body.appendChild(dot);
+
+  const duration = 600;
+  const start = performance.now();
+
+  function step(now) {
+    const t = Math.min((now - start) / duration, 1);
+    const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+    dot.style.left = (startX + (endX - startX) * ease) + 'px';
+    dot.style.top  = (startY + (endY - startY) * ease) + 'px';
+    dot.style.opacity = 1 - ease;
+    dot.style.transform = `scale(${1 - ease * 0.5})`;
+    if (t < 1) requestAnimationFrame(step);
+    else dot.remove();
+  }
+  requestAnimationFrame(step);
+}
+
+function showActionCard(cardData) {
+  if (cardData) {
+    document.querySelector('.action-card-thought').textContent = cardData.thought || '';
+    document.querySelector('.action-card-new').textContent = cardData.reframe || '';
+    const items = document.querySelectorAll('.action-item div:last-child');
+    (cardData.actions || []).forEach((a, i) => { if (items[i]) items[i].textContent = a; });
+  }
+
+  document.getElementById('cardBar').classList.add('show');
+  document.getElementById('actionCardWrap').style.display = 'none';
+  document.getElementById('chatInputWrap').style.display = 'flex';
+
+  // 飞点提示已存入抽屉
+  setTimeout(() => flyDotToDrawer(), 400);
+  setTimeout(() => { document.getElementById('messages').scrollTop = 99999; }, 100);
+
+  // 生成历史标题并插入抽屉
+  generateHistoryTitle().then(title => {
+    if (title) prependHistoryItem(title);
+  });
+}
+
+function toggleCardExpand() {
+  const wrap = document.getElementById('actionCardWrap');
+  const chevron = document.getElementById('cardBarChevron');
+  const isOpen = wrap.style.display === 'block';
+  if (!isOpen) {
+    // 展开卡片：隐藏输入框
+    wrap.style.display = 'block';
+    chevron.classList.add('open');
+    document.getElementById('chatInputWrap').style.display = 'none';
+    setTimeout(() => { document.getElementById('messages').scrollTop = 99999; }, 100);
+  } else {
+    // 收起卡片：恢复输入框
+    wrap.style.display = 'none';
+    chevron.classList.remove('open');
+    document.getElementById('chatInputWrap').style.display = 'flex';
+  }
+}
+
+function collapseCard() {
+  document.getElementById('actionCardWrap').style.display = 'none';
+  document.getElementById('cardBarChevron').classList.remove('open');
+  // 恢复输入框，placeholder 切换
+  const input = document.getElementById('chatInput');
+  input.placeholder = '还有什么想聊的…';
+  document.getElementById('chatInputWrap').style.display = 'flex';
+  document.getElementById('chatStatus').textContent = '本次对话已完成';
+  input.focus();
+}
+
+
+function toggleListCard(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const wasExpanded = el.classList.contains('expanded');
+  document.querySelectorAll('.list-card-item.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) el.classList.add('expanded');
+}
+
+function setListCardStatus(e, id, idx, status) {
+  e.stopPropagation();
+  const item = document.getElementById(id);
+  const badge = document.getElementById(`lc-badge-${idx}`);
+  const btns = item.querySelectorAll('.card-toggle-btn');
+  btns.forEach(b => b.classList.remove('active-pending', 'active-done'));
+  if (status === 'done') {
+    btns[1].classList.add('active-done');
+    badge.textContent = '已完成';
+    badge.className = 'list-card-badge done';
+    MOCK_CARDS[idx].status = 'done';
+  } else {
+    btns[0].classList.add('active-pending');
+    badge.textContent = '进行中';
+    badge.className = 'list-card-badge pending';
+    MOCK_CARDS[idx].status = 'pending';
+  }
+}
+
+function toggleCardItem(el) {
+  const wasExpanded = el.classList.contains('expanded');
+  // 收起其他所有展开的
+  document.querySelectorAll('.card-item.expanded').forEach(c => c.classList.remove('expanded'));
+  if (!wasExpanded) el.classList.add('expanded');
+}
+
+function setCardStatus(e, btn, status) {
+  e.stopPropagation();
+  const item = btn.closest('.card-item');
+  const statusEl = item.querySelector('.card-item-status');
+  const toggleBtns = item.querySelectorAll('.card-toggle-btn');
+
+  toggleBtns.forEach(b => b.classList.remove('active-pending', 'active-done'));
+
+  if (status === 'done') {
+    btn.classList.add('active-done');
+    statusEl.textContent = '已完成';
+    statusEl.className = 'card-item-status';
+  } else {
+    btn.classList.add('active-pending');
+    statusEl.textContent = '进行中';
+    statusEl.className = 'card-item-status pending';
+  }
+}
+
+
+const MOCK_CARDS = [
+  { date: '3月2日', month: '2026年3月', thought: '「今天被否，说明我整个人都不行」', action: '发一封邮件，用一句话写下对这个问题的真实判断', reframe: '今天被否的是那个方案，不是你整个人。方案可以迭代，但你对问题的判断力是真实的。', status: 'done' },
+  { date: '2月28日', month: '2026年2月', thought: '「被项目架空，我是不是已经被边缘化了」', action: '找直属领导确认一次：我在这个项目里的角色是什么', reframe: '架空感可能是真实的，但也可能是信息不透明造成的焦虑。先确认事实，再判断处境。', status: 'pending' },
+  { date: '2月20日', month: '2026年2月', thought: '「努力没有用，我可能要被裁了」', action: '找一个信任的同事，15分钟聊聊他眼中你最近的状态', reframe: '绩效被压是真实的，但你做过的事被认可也是真实的。这两件事同时存在——局势比你想的更复杂。', status: 'pending' },
+  { date: '2月14日', month: '2026年2月', thought: '「我不被重视，说什么都没用」', action: '给自己写一句话：上周我做得还不错的一件事是___', reframe: '被忽视的感觉是真实的。但你今晚能坐下来把它说出来，说明你还没有放弃自己。', status: 'pending' },
+  { date: '2月5日', month: '2026年2月', thought: '「我跟不上，大家都比我强」', action: '列出这个月让你有成就感的一件具体的事', reframe: '比较会放大别人的优势、缩小自己的。你做过的事是真实存在的，不因为别人升职而消失。', status: 'done' },
+  { date: '1月22日', month: '2026年1月', thought: '「我做的东西没有价值」', action: '找一个你信任的人，花15分钟聊聊今天发生了什么', reframe: '觉得没价值，有时候是因为你太靠近它了，看不见全貌。让别人的眼睛帮你看一次。', status: 'done' },
+];
+
+const MOCK_HISTORY = [
+  { date: '3月2日', month: '2026年3月', title: '被项目架空，不知道自己还重不重要', tags: ['职场压力'], hasCard: true },
+  { date: '2月28日', month: '2026年2月', title: '今天开会被当众否掉，很难受', tags: ['被否定'], hasCard: false },
+  { date: '2月20日', month: '2026年2月', title: '绩效又被压了，开始怀疑自己', tags: ['绩效', '自我怀疑'], hasCard: true },
+  { date: '2月14日', month: '2026年2月', title: '感觉团队里没人在乎我说什么', tags: ['被忽视'], hasCard: true },
+  { date: '2月5日', month: '2026年2月', title: '新来的同事升得比我快，心里很不是滋味', tags: ['比较'], hasCard: true },
+  { date: '1月30日', month: '2026年1月', title: '跟领导沟通完感觉更差了', tags: ['沟通'], hasCard: false },
+  { date: '1月22日', month: '2026年1月', title: '又一次被排除在重要会议之外', tags: ['职场压力', '被边缘化'], hasCard: true },
+  { date: '1月15日', month: '2026年1月', title: '年终总结写不下去，什么都觉得不够好', tags: ['自我否定'], hasCard: false },
+];
+
+let currentListType = 'cards';
+let currentTab = 'all';
+
+function showListPage(type) {
+  currentListType = type;
+  currentTab = 'all';
+  document.getElementById('listPageTitle').textContent = type === 'cards' ? '行动卡片' : '历史对话';
+  document.getElementById('listPageTime').textContent = now();
+
+  // tabs：历史对话换成情绪标签筛选
+  const tabsEl = document.getElementById('listTabs');
+  if (type === 'cards') {
+    tabsEl.innerHTML = `
+      <div class="list-tab active" onclick="switchTab(this,'all')">全部</div>
+      <div class="list-tab" onclick="switchTab(this,'pending')">进行中</div>
+      <div class="list-tab" onclick="switchTab(this,'done')">已完成</div>`;
+  } else {
+    tabsEl.innerHTML = `
+      <div class="list-tab active" onclick="switchTab(this,'all')">全部</div>
+      <div class="list-tab" onclick="switchTab(this,'card')">已收卡片</div>
+      <div class="list-tab" onclick="switchTab(this,'nocard')">未收卡片</div>`;
+  }
+
+  renderList('all');
+  document.getElementById('home').classList.remove('active');
+  document.getElementById('chat').classList.remove('active');
+  document.getElementById('listPage').classList.add('active');
+}
+
+function hideListPage() {
+  document.getElementById('listPage').classList.remove('active');
+  document.getElementById('home').classList.add('active');
+}
+
+function switchTab(el, tab) {
+  document.querySelectorAll('.list-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  currentTab = tab;
+  renderList(tab);
+}
+
+function renderList(tab) {
+  const body = document.getElementById('listBody');
+  body.innerHTML = '';
+  let lastMonth = '';
+
+  if (currentListType === 'cards') {
+    const filtered = MOCK_CARDS.filter(c => tab === 'all' || c.status === tab);
+    if (!filtered.length) { body.innerHTML = '<div style="text-align:center;padding:40px 0;color:rgba(148,163,184,0.35);font-size:14px">暂无记录</div>'; return; }
+    filtered.forEach((c, idx) => {
+      if (c.month !== lastMonth) {
+        lastMonth = c.month;
+        body.innerHTML += `<div class="list-month-label">${c.month}</div>`;
+      }
+      const isDone = c.status === 'done';
+      body.innerHTML += `
+        <div class="list-card-item" id="lc-${idx}" onclick="toggleListCard('lc-${idx}')">
+          <div class="list-card-thought">${c.thought}</div>
+          <div class="list-card-action">${c.action}</div>
+          <div class="list-card-footer">
+            <div class="list-card-date">${c.date}</div>
+            <div class="list-card-badge ${isDone ? 'done' : 'pending'}" id="lc-badge-${idx}">${isDone ? '已完成' : '进行中'}</div>
+          </div>
+          <div class="list-card-expand" id="lc-detail-${idx}">
+            <div style="height:1px;background:rgba(255,255,255,0.06);margin:12px 0"></div>
+            <div class="card-detail-label">换个角度看</div>
+            <div class="card-detail-reframe">${c.reframe || '你做过的事是真实的，局势比你想的更复杂。'}</div>
+            <div class="card-status-toggle">
+              <button class="card-toggle-btn ${!isDone ? 'active-pending' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${idx},'pending')">进行中</button>
+              <button class="card-toggle-btn ${isDone ? 'active-done' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${idx},'done')">已完成 ✓</button>
+            </div>
+          </div>
+        </div>`;
+    });
+  } else {
+    const filtered = MOCK_HISTORY.filter(h =>
+      tab === 'all' || (tab === 'card' && h.hasCard) || (tab === 'nocard' && !h.hasCard)
+    );
+    if (!filtered.length) { body.innerHTML = '<div style="text-align:center;padding:40px 0;color:rgba(148,163,184,0.35);font-size:14px">暂无记录</div>'; return; }
+    filtered.forEach(h => {
+      if (h.month !== lastMonth) {
+        lastMonth = h.month;
+        body.innerHTML += `<div class="list-month-label">${h.month}</div>`;
+      }
+      const tags = h.tags.map(t => `<div class="list-history-tag">${t}</div>`).join('');
+      const cardBadge = h.hasCard ? `<div class="list-history-tag" style="background:rgba(255,159,104,0.08);color:rgba(255,159,104,0.6)">已收卡片</div>` : '';
+      body.innerHTML += `
+        <div class="list-history-item" onclick="hideListPage(); startChat('${h.title}')">
+          <div class="list-history-title">${h.title}</div>
+          <div class="list-history-footer">${tags}${cardBadge}<div class="list-history-date">${h.date}</div></div>
+        </div>`;
+    });
+  }
+}
+
+
+function resetName() {
+  localStorage.removeItem('yeyu_username');
+  userName = '';
+  location.reload();
+}
+
+// 页面加载
+window.addEventListener('load', initHome);
+</script>
+</body>
+</html>
