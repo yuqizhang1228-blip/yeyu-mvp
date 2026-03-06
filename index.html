@@ -993,7 +993,8 @@
     <div class="drawer-header">
       <div class="drawer-avatar"></div>
       <div class="drawer-username" id="drawerUsername">Peter</div>
-      <div class="drawer-meta">已梳理 3 次情绪 · 2 张行动卡片</div>
+      <div style="font-size:11px;color:rgba(148,163,184,0.35);margin-top:2px;letter-spacing:0.05em" id="drawerUserId"></div>
+      <div class="drawer-meta" id="drawerMeta">已梳理 0 次情绪 · 0 张行动卡片</div>
     </div>
 
     <div class="drawer-body">
@@ -1004,8 +1005,8 @@
         <div class="card-summary-left">
           <div class="card-summary-icon">✦</div>
           <div>
-            <div class="card-summary-main">12 张</div>
-            <div class="card-summary-sub">3 张进行中</div>
+            <div class="card-summary-main" id="summaryTotal">0 张</div>
+            <div class="card-summary-sub" id="summaryPending">0 张进行中</div>
           </div>
         </div>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round" opacity="0.4"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1435,6 +1436,7 @@ async function callAI(userMessage) {
         if (displayText) addMsg('ai', displayText);
         try {
           const cardData = JSON.parse(cardMatch[1].trim());
+          addCard(cardData);
           setTimeout(() => showActionCard(cardData), 800);
         } catch(e) {
           setTimeout(() => showActionCard(null), 800);
@@ -1704,7 +1706,9 @@ function showActionCard(cardData) {
 
   // 生成历史标题并插入抽屉
   generateHistoryTitle().then(title => {
-    if (title) prependHistoryItem(title);
+    const t = title || '一次情绪梳理';
+    prependHistoryItem(t);
+    addHistory(t, true);
   });
 }
 
@@ -1792,25 +1796,86 @@ function setCardStatus(e, btn, status) {
 }
 
 
-const MOCK_CARDS = [
-  { date: '3月2日', month: '2026年3月', thought: '「今天被否，说明我整个人都不行」', action: '发一封邮件，用一句话写下对这个问题的真实判断', reframe: '今天被否的是那个方案，不是你整个人。方案可以迭代，但你对问题的判断力是真实的。', status: 'done' },
-  { date: '2月28日', month: '2026年2月', thought: '「被项目架空，我是不是已经被边缘化了」', action: '找直属领导确认一次：我在这个项目里的角色是什么', reframe: '架空感可能是真实的，但也可能是信息不透明造成的焦虑。先确认事实，再判断处境。', status: 'pending' },
-  { date: '2月20日', month: '2026年2月', thought: '「努力没有用，我可能要被裁了」', action: '找一个信任的同事，15分钟聊聊他眼中你最近的状态', reframe: '绩效被压是真实的，但你做过的事被认可也是真实的。这两件事同时存在——局势比你想的更复杂。', status: 'pending' },
-  { date: '2月14日', month: '2026年2月', thought: '「我不被重视，说什么都没用」', action: '给自己写一句话：上周我做得还不错的一件事是___', reframe: '被忽视的感觉是真实的。但你今晚能坐下来把它说出来，说明你还没有放弃自己。', status: 'pending' },
-  { date: '2月5日', month: '2026年2月', thought: '「我跟不上，大家都比我强」', action: '列出这个月让你有成就感的一件具体的事', reframe: '比较会放大别人的优势、缩小自己的。你做过的事是真实存在的，不因为别人升职而消失。', status: 'done' },
-  { date: '1月22日', month: '2026年1月', thought: '「我做的东西没有价值」', action: '找一个你信任的人，花15分钟聊聊今天发生了什么', reframe: '觉得没价值，有时候是因为你太靠近它了，看不见全貌。让别人的眼睛帮你看一次。', status: 'done' },
-];
+// =====================
+// 持久化数据层（localStorage）
+// =====================
 
-const MOCK_HISTORY = [
-  { date: '3月2日', month: '2026年3月', title: '被项目架空，不知道自己还重不重要', tags: ['职场压力'], hasCard: true },
-  { date: '2月28日', month: '2026年2月', title: '今天开会被当众否掉，很难受', tags: ['被否定'], hasCard: false },
-  { date: '2月20日', month: '2026年2月', title: '绩效又被压了，开始怀疑自己', tags: ['绩效', '自我怀疑'], hasCard: true },
-  { date: '2月14日', month: '2026年2月', title: '感觉团队里没人在乎我说什么', tags: ['被忽视'], hasCard: true },
-  { date: '2月5日', month: '2026年2月', title: '新来的同事升得比我快，心里很不是滋味', tags: ['比较'], hasCard: true },
-  { date: '1月30日', month: '2026年1月', title: '跟领导沟通完感觉更差了', tags: ['沟通'], hasCard: false },
-  { date: '1月22日', month: '2026年1月', title: '又一次被排除在重要会议之外', tags: ['职场压力', '被边缘化'], hasCard: true },
-  { date: '1月15日', month: '2026年1月', title: '年终总结写不下去，什么都觉得不够好', tags: ['自我否定'], hasCard: false },
-];
+function getUserId() {
+  let uid = localStorage.getItem('yeyu_uid');
+  if (!uid) {
+    uid = 'YY-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).slice(2,5).toUpperCase();
+    localStorage.setItem('yeyu_uid', uid);
+  }
+  return uid;
+}
+
+function getCards() {
+  try { return JSON.parse(localStorage.getItem('yeyu_cards') || '[]'); } catch(e) { return []; }
+}
+
+function saveCards(cards) {
+  localStorage.setItem('yeyu_cards', JSON.stringify(cards));
+}
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem('yeyu_history') || '[]'); } catch(e) { return []; }
+}
+
+function saveHistory(history) {
+  localStorage.setItem('yeyu_history', JSON.stringify(history));
+}
+
+function addCard(cardData) {
+  const cards = getCards();
+  const now2 = new Date();
+  const month = now2.getFullYear() + '年' + (now2.getMonth()+1) + '月';
+  const date = (now2.getMonth()+1) + '月' + now2.getDate() + '日';
+  cards.unshift({
+    id: Date.now(),
+    date, month,
+    thought: cardData.thought || '',
+    reframe: cardData.reframe || '',
+    action: (cardData.actions || [])[0] || '',
+    actions: cardData.actions || [],
+    status: 'pending'
+  });
+  saveCards(cards);
+  updateStats();
+}
+
+function addHistory(title, hasCard) {
+  const history = getHistory();
+  const now2 = new Date();
+  const month = now2.getFullYear() + '年' + (now2.getMonth()+1) + '月';
+  const date = (now2.getMonth()+1) + '月' + now2.getDate() + '日';
+  history.unshift({ id: Date.now(), date, month, title, hasCard: !!hasCard, tags: [] });
+  saveHistory(history);
+  updateStats();
+}
+
+function updateStats() {
+  const cards = getCards();
+  const history = getHistory();
+  const total = cards.length;
+  const pending = cards.filter(c => c.status === 'pending').length;
+  const sessions = history.length;
+
+  const metaEl = document.getElementById('drawerMeta');
+  if (metaEl) metaEl.textContent = `已梳理 ${sessions} 次情绪 · ${total} 张行动卡片`;
+
+  const summaryTotal = document.getElementById('summaryTotal');
+  const summaryPending = document.getElementById('summaryPending');
+  if (summaryTotal) summaryTotal.textContent = total + ' 张';
+  if (summaryPending) summaryPending.textContent = pending + ' 张进行中';
+
+  // 更新用户ID显示
+  const uidEl = document.getElementById('drawerUserId');
+  if (uidEl) uidEl.textContent = getUserId();
+}
+
+// MOCK_CARDS / MOCK_HISTORY 改为从 localStorage 读取
+function getMockCards() { return getCards(); }
+function getMockHistory() { return getHistory(); }
 
 let currentListType = 'cards';
 let currentTab = 'all';
@@ -1859,6 +1924,7 @@ function renderList(tab) {
   let lastMonth = '';
 
   if (currentListType === 'cards') {
+    const MOCK_CARDS = getMockCards();
     const filtered = MOCK_CARDS.filter(c => tab === 'all' || c.status === tab);
     if (!filtered.length) { body.innerHTML = '<div style="text-align:center;padding:40px 0;color:rgba(148,163,184,0.35);font-size:14px">暂无记录</div>'; return; }
     filtered.forEach((c, idx) => {
@@ -1887,6 +1953,7 @@ function renderList(tab) {
         </div>`;
     });
   } else {
+    const MOCK_HISTORY = getMockHistory();
     const filtered = MOCK_HISTORY.filter(h =>
       tab === 'all' || (tab === 'card' && h.hasCard) || (tab === 'nocard' && !h.hasCard)
     );
@@ -1915,7 +1982,7 @@ function resetName() {
 }
 
 // 页面加载
-window.addEventListener('load', initHome);
+window.addEventListener('load', () => { initHome(); updateStats(); });
 </script>
 </body>
 </html>
