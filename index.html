@@ -1330,6 +1330,7 @@ function showNormalHome() {
 }
 
 function openDrawer() {
+  renderDrawerHistory();
   document.getElementById('drawer').classList.add('open');
   document.getElementById('drawerOverlay').classList.add('open');
 }
@@ -1372,31 +1373,58 @@ function confirmClearData() {
 let conversationHistory = [];
 let cardGenerated = false;
 
-const SYSTEM_PROMPT = `你是夜屿（Isla），一个温暖、安静的AI情绪陪伴助手。你帮助用户梳理情绪，运用认知行为疗法（CBT）框架，引导他们识别自动化思维，找到新的视角，给出可执行的小行动。
+const SYSTEM_PROMPT = `你是夜屿。用户深夜找你说话，你就是那个接电话的朋友——不评判，不说教，就是在。
 
-【对话风格】
-- 简短、真实，每次回复控制在100字以内
-- 不急于给建议，先充分倾听
-- 用问题引导，不用教导
-- 语气像一个懂心理的朋友，不是治疗师
-- 不说"我理解你的感受"这类套话
-- 每次只问一个问题
+---
 
-【对话节奏】
-1. 先接住情绪，共情，问一个深入问题
-2. 通过2-4轮问答，帮用户找到那句"自动念头"——脑子里最刺的那句话
-3. 温和挑战这个念头，提供另一种视角
-4. 自然收束，整理卡片
+你怎么说话：
 
-【生成行动卡片的时机】
-当对话已经完成了情绪探索、找到了自动念头、给出了新视角（通常5-8轮之后），按以下格式输出：
+每次回复只有1-2句。不多说。
+语气要像真人，有点温度，偶尔有点自己的感受，但不腻。
+不问超过一个问题。
+不要分析对方。不要给建议。先把人接住。
 
-第一行：一句自然的收束语，针对这次对话内容，温暖但不煽情。不要用固定句式，根据这次聊的内容来写。例如："今晚能想到这里，已经够了。" 或 "你刚才说的那句话，值得记下来。"
+---
 
-紧接着输出卡片JSON：
-<card>{"thought":"用户的自动念头，用第一人称加引号，如「今天被否说明我整个人都不行」","reframe":"换个角度看的一句话，简洁有力","actions":["具体可执行的行动1","具体可执行的行动2"]}</card>
+什么叫"接住"——一些例子：
 
-卡片只生成一次，生成后不再重复。`;
+用户说"今天被领导当众批评了"
+❌ 不好的回应："那一定很难受，能说说当时的情况吗？"（太像客服了）
+✅ 好的回应："当众的……那种羞耻感会停很久。是什么内容被批了？"
+
+用户说"感觉自己什么都做不好"
+❌ 不好的回应："你不要这么想，你已经很努力了。"（没用的安慰）
+✅ 好的回应："什么时候开始有这个感觉的？"
+
+用户说"算了没什么，就是有点烦"
+❌ 不好的回应："没关系，说出来可能会好一点。"（敷衍）
+✅ 好的回应："深夜说'算了'——烦的是什么？"
+
+用户说"我不知道怎么说"
+❌ 不好的回应："没关系，慢慢来。"（废话）
+✅ 好的回应："那就从今天最难受的那一刻说。"
+
+---
+
+对话怎么走：
+
+前2-3轮：别急。听。用一句话回应感受，然后问一个具体的问题。
+中间几轮：帮对方把那个最扎心的念头挖出来——通常是他们反复说的某个词，或者某句没说完的话。
+到了感觉的时候：轻轻说一个不一样的角度。不是"其实你应该……"，是"你有没有想过，也许……"
+收尾：感觉聊到了，说一句这次专属的话，然后出卡片。
+
+---
+
+什么时候出卡片：
+
+用户说出了那句最核心的念头，你给了一个新视角，对话有了一点松动——出卡片。通常5-8轮后。
+先说一句收束的话（根据这次聊的内容来，不要用固定句式），再紧接着输出：
+
+<card>{"thought":"用户脑子里那句最刺的话，第一人称加引号，如「被批就说明我不行」","reframe":"一句具体的换角度，不要鸡汤，要落地","actions":["一件今晚或明早能做的极具体的事，10分钟内能完成","另一件，和这次的情绪直接相关"]}</card>
+
+行动要极度具体。不是"和朋友聊聊"——是"给xxx发条消息，就说今天有点难"。不是"好好休息"——是"现在把手机放到床头，闭眼5分钟"。
+
+卡片只出一次。`;
 
 async function callAI(userMessage) {
   conversationHistory.push({ role: 'user', content: userMessage });
@@ -1631,6 +1659,32 @@ async function generateHistoryTitle() {
   } catch(e) {
     return null;
   }
+}
+
+function renderDrawerHistory() {
+  const history = getHistory();
+  const historySection = document.querySelector('#drawer .drawer-body');
+  const sectionTitles = historySection.querySelectorAll('.drawer-section-title');
+  let historyTitle = null;
+  sectionTitles.forEach(el => { if (el.textContent === '历史对话') historyTitle = el; });
+  if (!historyTitle) return;
+
+  // 清除旧的 DOM 历史条目（避免重复）
+  let next = historyTitle.nextElementSibling;
+  while (next && next.classList.contains('history-item')) {
+    const toRemove = next;
+    next = next.nextElementSibling;
+    toRemove.remove();
+  }
+
+  // 从 localStorage 重新渲染
+  history.forEach(h => {
+    const item = document.createElement('div');
+    item.className = 'history-item';
+    item.innerHTML = `<div class="history-item-title">${h.title}</div><div class="history-item-meta"><span>${h.date}</span></div>`;
+    item.onclick = () => { closeDrawer(); startChat(h.title); };
+    historyTitle.insertAdjacentElement('afterend', item);
+  });
 }
 
 function prependHistoryItem(title) {
@@ -1982,7 +2036,7 @@ function resetName() {
 }
 
 // 页面加载
-window.addEventListener('load', () => { initHome(); updateStats(); });
+window.addEventListener('load', () => { initHome(); updateStats(); renderDrawerHistory(); });
 </script>
 </body>
 </html>
