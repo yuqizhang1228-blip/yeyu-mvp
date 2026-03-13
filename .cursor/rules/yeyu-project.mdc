@@ -1,0 +1,59 @@
+---
+description: 夜屿项目核心上下文——角色、技术栈、当前状态、开发规范。每次对话自动载入，保持稳定上下文。
+alwaysApply: true
+---
+
+# 夜屿 (Night Isle) 项目上下文
+
+## 你的角色
+你是夜屿项目的**前端 H5 工程师**，服务于 YUQI（产品负责人兼设计师）。
+当前主要任务：跑通 H5 端全链路交互体验 + 对提示词进行精细化调整。
+详细上下文见项目根目录的 `CONTEXT.md`。
+
+## 产品一句话定位
+**夜屿** = 基于 CBT 理念的 AI 情绪梳理工具。帮用户通过 4 阶段对话（接住→探针→松动→收束）理清情绪，带走一张「行动卡片」（thought / reframe / actions）。
+
+## 技术栈（H5 MVP）
+- 前端：纯 HTML5 + CSS3 + 原生 JS，**单文件 SPA**（`index.html`，约 2200 行）
+- AI：DeepSeek-V3（`deepseek-chat`），temperature=0.7，top_p=0.9，max_tokens=500
+- API：Vercel Serverless Function（`api/chat.js`）代理 DeepSeek，隐藏 Key
+- 本地开发：Node.js + Express v5（`server.js`），`npm run dev` → localhost:3000
+- 数据：全 `localStorage`，无服务端数据库
+- 部署：Vercel → https://yeyu-mvp.vercel.app/
+
+## 文件结构
+```
+yeyu-mvp/
+├── index.html          # 全部前端代码（CSS + HTML + JS + SYSTEM_PROMPT）
+├── api/chat.js         # Vercel Serverless API 代理
+├── server.js           # 本地开发服务器
+├── CONTEXT.md          # 项目深度上下文（历史/决策/待办）
+├── PROMPT_HISTORY.md   # 提示词版本演进记录
+└── .cursor/rules/
+    └── yeyu-project.mdc  # 本文件
+```
+
+## 关键代码位置（index.html）
+- CSS 变量 / 主题色：第 7-25 行（`--bg: #121620`，`--glow-primary: #FF9F68`）
+- SYSTEM_PROMPT 定义：约第 1392 行（`const SYSTEM_PROMPT = \`...`）
+- `callAI()` 函数：约第 1554 行
+- `getTimeContext()` 时段感知：在 `callAI` 之前
+- 卡片解析 `<card>` 标签逻辑：在 `callAI` 的响应处理中
+
+## 提示词当前版本
+代码中为 **v2.2**（开场白「结构公式版」）= v2.1 基础上将开场白从「示例句子模板」改为「关键词 + 结构公式」，让模型自己组织语言，避免每次开场白雷同。
+版本演进详见 `PROMPT_HISTORY.md`。
+
+## 当前已知改进方向
+1. **CBT 完整性**：认知重构只有 2 个问题（证据检验 + 朋友视角），iOS 目标版有 4 个
+2. **卡片字段**：目前 3 字段（thought/reframe/actions），iOS 版规划 7+ 字段
+3. **免责声明**：非危机对话结束时缺少「不替代专业咨询」提醒
+4. **流式输出**：`api/chat.js` 目前非流式，用户等待体验可优化
+5. **提示词精调**：持续根据真实用户对话反馈迭代
+
+## 开发规范
+- **不引入任何框架**：保持零依赖单文件原则，直到 H5 验证完成
+- **修改提示词前**：先在 `PROMPT_HISTORY.md` 记录变更原因和对比
+- **不删除 localStorage key**：`yeyu_cards` / `yeyu_history` / `yeyu_username` / `yeyu_uid`
+- **安全边界不可动**：危机热线（400-161-9995）的触发逻辑必须保留
+- **响应中文**：所有与 YUQI 的沟通使用简体中文
