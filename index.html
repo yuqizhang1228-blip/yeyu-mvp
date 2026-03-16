@@ -440,6 +440,7 @@
     border-bottom-left-radius: 6px; backdrop-filter: blur(10px);
   }
   .msg-time { font-size: 11px; color: rgba(148,163,184,0.4); margin-top: 4px; padding: 0 4px; }
+  .msg-provider { font-size: 10px; color: rgba(148,163,184,0.35); margin-top: 2px; padding: 0 4px; letter-spacing: 0.03em; }
 
   /* Thinking indicator — 大形象版 */
   .thinking {
@@ -1478,12 +1479,12 @@ const SYSTEM_PROMPT = `你是「夜屿」小岛的守夜人，一个有时间感
 语气跟着时间走：深夜更轻更静，午后更清醒直接，清晨带点温度。行动建议考虑时间合理性（深夜不建议打电话）。
 
 【说话风格】
-- 冷静成熟、温暖但有边界，像一个可靠的朋友，不抓马不唱独角戏
-- 多用画面感形容词（"心好像往下一沉"、"有点被晾在外面"），少用抽象词
-- 允许一句口语感叹（"这一下挺难受的"），但后面接具体问题
-- emoji 只用 🌙 💭，其他禁用
-- 不用专业术语（认知扭曲、自动化思维、CBT）
-- 禁止过头俏皮（"笑死"、"OMG"）
+- 像活人朋友：可靠、接得住，但别像客服。可以有一点冷幽默、温和吐槽或自嘲，让人感觉在和一个真人聊。
+- 多用画面感形容词（"心好像往下一沉"、"有点被晾在外面"），少用抽象词。
+- 允许口语感叹（"这一下挺难受的"、"这话听着就扎"），后面接具体问题。
+- 表情（emoji）可以放开用，像和熟人聊天一样自然，不必刻意克制；🌙 💭 ✨ 🙏 😮‍💨 🤔 等都可，有分寸即可。
+- 不用专业术语（认知扭曲、自动化思维、CBT）。
+- 禁止网络烂梗（"笑死"、"OMG"、"绝绝子"），但真实一点的轻幽默可以。
 
 【回复节奏】
 - 通常 2～4 句：接住/点感受 + 轻展开 + 一个问题。让人感觉在认真聊。
@@ -1542,50 +1543,76 @@ const SYSTEM_PROMPT = `你是「夜屿」小岛的守夜人，一个有时间感
 
 <card>{"thought":"「我确实不行」","reframe":"「今天被否的是这个方案的需求理解，不是我整个人的能力——换成朋友我会说他运气不好」","actions":["今晚花10分钟，把被否的那条需求重新读一遍，只标出一处自己确实理解偏了的地方","明天上午找那个接手的同事，问一句'你看到的需求重点是什么'，纯学习，不用解释"]}</card>`;
 
-async function callAI(userMessage) {
-  conversationHistory.push({ role: 'user', content: userMessage });
-
-  addThinking();
-
-  // 获取当前时间上下文
+function getChatPayload() {
   const timeCtx = getTimeContext();
   const timeInfo = `【当前时间】现在是${timeCtx.period}（${timeCtx.desc}）`;
   const profileInfo = getProfileSummaryForSystem();
+  return {
+    model: 'deepseek-chat',
+    max_tokens: 500,
+    temperature: 0.7,
+    top_p: 0.9,
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: timeInfo + (profileInfo ? '\n' + profileInfo : '') },
+      ...conversationHistory
+    ]
+  };
+}
+
+// 开发者测试：ds/mm 切换模型，model 查询当前模型
+function trySwitchModel(text) {
+  const t = (text || '').trim().toLowerCase();
+  if (t === 'ds') {
+    currentProvider = 'deepseek';
+    addMsg('ai', '已切换为 DeepSeek');
+    return true;
+  }
+  if (t === 'mm') {
+    currentProvider = 'minimax';
+    addMsg('ai', '已切换为 MINIMAX');
+    return true;
+  }
+  if (t === 'model') {
+    addMsg('ai', currentProvider === 'deepseek' ? '当前模型：DeepSeek' : '当前模型：MINIMAX', { provider: currentProvider });
+    return true;
+  }
+  return false;
+}
+
+async function callAI(userMessage) {
+  conversationHistory.push({ role: 'user', content: userMessage });
+
+  const payload = getChatPayload();
+  addThinking();
 
   try {
-    const response = await fetch('/api/chat', {
+    const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'deepseek-chat',
-        max_tokens: 500,
-        temperature: 0.7,
-        top_p: 0.9,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'system', content: timeInfo + (profileInfo ? '\n' + profileInfo : '') },
-          ...conversationHistory
-        ]
-      })
+      body: JSON.stringify({ ...payload, provider: currentProvider })
     });
+    const data = await res.json();
 
-    const data = await response.json();
+    if (!res.ok || data.error) {
+      removeThinking();
+      const errMsg = typeof data.error === 'string' ? data.error : (data.error?.message || '接口异常，请稍后重试');
+      addMsg('ai', errMsg, { provider: currentProvider });
+      conversationHistory.pop();
+      return;
+    }
+
     const fullText = data.choices?.[0]?.message?.content || '有点走神了，你刚才说什么？';
-
     conversationHistory.push({ role: 'assistant', content: fullText });
-
     removeThinking();
 
-    // 检测是否包含卡片
     const cardMatch = fullText.match(/<card>([\s\S]*?)<\/card>/);
     if (cardMatch && !cardGenerated) {
       cardGenerated = true;
       const displayText = fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim();
-      // 先加过渡文字
       addTransition('我们来把今晚的整理一下');
       setTimeout(() => {
-        // 再显示AI的收束语
-        if (displayText) addMsg('ai', displayText);
+        if (displayText) addMsg('ai', displayText, { provider: currentProvider });
         try {
           const cardData = JSON.parse(cardMatch[1].trim());
           addCard(cardData);
@@ -1595,12 +1622,11 @@ async function callAI(userMessage) {
         }
       }, 600);
     } else {
-      addMsg('ai', fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim());
+      addMsg('ai', fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim(), { provider: currentProvider });
     }
-
   } catch(err) {
     removeThinking();
-    addMsg('ai', '网络好像有点问题，稍后再试试？');
+    addMsg('ai', '网络好像有点问题，稍后再试试？', { provider: currentProvider });
   }
 }
 
@@ -1608,6 +1634,7 @@ async function callAI(userMessage) {
 let isThinking = false;
 let msgCount = 0;
 let currentInput = '';
+let currentProvider = 'deepseek'; // 开发者测试：对话里输入 ds / mm 切换
 let greetingSubtitleTimer = null;
 
 function now() {
@@ -1713,6 +1740,7 @@ function sendMsg() {
   if (!text || isThinking) return;
   input.value = ''; input.style.height = 'auto';
   addMsg('user', text);
+  if (trySwitchModel(text)) return; // 开发者：ds/mm 切换模型，不进入对话历史
   msgCount++;
   callAI(text);
 }
@@ -1724,14 +1752,16 @@ function showThinkingThen(cb) {
   setTimeout(() => { removeThinking(); cb(); }, delay);
 }
 
-function addMsg(role, text) {
+function addMsg(role, text, opts) {
+  opts = opts || {};
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
   const timeStr = now();
+  const providerLabel = (role === 'ai' && opts.provider) ? `<div class="msg-provider">${opts.provider === 'minimax' ? 'MINIMAX' : 'DeepSeek'}</div>` : '';
 
   if (role === 'ai') {
-    div.innerHTML = `<div class="bubble"></div><div class="msg-time">${timeStr}</div>`;
+    div.innerHTML = `<div class="bubble"></div><div class="msg-time">${timeStr}</div>${providerLabel}`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
     const bubble = div.querySelector('.bubble');
@@ -1986,22 +2016,28 @@ function toggleListCard(id) {
   if (!wasExpanded) el.classList.add('expanded');
 }
 
-function setListCardStatus(e, id, idx, status) {
+function setListCardStatus(e, id, cardId, status) {
   e.stopPropagation();
   const item = document.getElementById(id);
-  const badge = document.getElementById(`lc-badge-${idx}`);
+  if (!item) return;
+  const badge = item.querySelector('.list-card-badge');
   const btns = item.querySelectorAll('.card-toggle-btn');
   btns.forEach(b => b.classList.remove('active-pending', 'active-done'));
   if (status === 'done') {
     btns[1].classList.add('active-done');
     badge.textContent = '已完成';
     badge.className = 'list-card-badge done';
-    MOCK_CARDS[idx].status = 'done';
   } else {
     btns[0].classList.add('active-pending');
     badge.textContent = '进行中';
     badge.className = 'list-card-badge pending';
-    MOCK_CARDS[idx].status = 'pending';
+  }
+  const cards = getCards();
+  const card = cards.find(c => String(c.id) === String(cardId));
+  if (card) {
+    card.status = status;
+    saveCards(cards);
+    updateStats();
   }
 }
 
@@ -2309,8 +2345,8 @@ function renderList(tab) {
       const isDone = c.status === 'done';
       body.innerHTML += `
         <div class="list-card-item" id="lc-${idx}" onclick="toggleListCard('lc-${idx}')">
-          <div class="list-card-thought">${c.thought}</div>
-          <div class="list-card-action">${c.action}</div>
+          <div class="list-card-thought">${(c.thought || '').replace(/"/g, '&quot;')}</div>
+          <div class="list-card-action">${(c.action || '').replace(/"/g, '&quot;')}</div>
           <div class="list-card-footer">
             <div class="list-card-date">${c.date}</div>
             <div class="list-card-badge ${isDone ? 'done' : 'pending'}" id="lc-badge-${idx}">${isDone ? '已完成' : '进行中'}</div>
@@ -2318,10 +2354,10 @@ function renderList(tab) {
           <div class="list-card-expand" id="lc-detail-${idx}">
             <div style="height:1px;background:rgba(255,255,255,0.06);margin:12px 0"></div>
             <div class="card-detail-label">换个角度看</div>
-            <div class="card-detail-reframe">${c.reframe || '你做过的事是真实的，局势比你想的更复杂。'}</div>
+            <div class="card-detail-reframe">${(c.reframe || '你做过的事是真实的，局势比你想的更复杂。').replace(/"/g, '&quot;')}</div>
             <div class="card-status-toggle">
-              <button class="card-toggle-btn ${!isDone ? 'active-pending' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${idx},'pending')">进行中</button>
-              <button class="card-toggle-btn ${isDone ? 'active-done' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${idx},'done')">已完成 ✓</button>
+              <button class="card-toggle-btn ${!isDone ? 'active-pending' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${c.id},'pending')">进行中</button>
+              <button class="card-toggle-btn ${isDone ? 'active-done' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${c.id},'done')">已完成 ✓</button>
             </div>
           </div>
         </div>`;
@@ -2339,8 +2375,9 @@ function renderList(tab) {
       }
       const tags = h.tags.map(t => `<div class="list-history-tag">${t}</div>`).join('');
       const cardBadge = h.hasCard ? `<div class="list-history-tag" style="background:rgba(255,159,104,0.08);color:rgba(255,159,104,0.6)">已收卡片</div>` : '';
+      const safeTitle = (h.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
       body.innerHTML += `
-        <div class="list-history-item" onclick="hideListPage(); startChat('${h.title}')">
+        <div class="list-history-item" onclick="hideListPage(); startChat('${safeTitle}')">
           <div class="list-history-title">${h.title}</div>
           <div class="list-history-footer">${tags}${cardBadge}<div class="list-history-date">${h.date}</div></div>
         </div>`;
