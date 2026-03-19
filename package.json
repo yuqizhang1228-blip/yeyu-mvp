@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "eval:yeyu": "node evals/yeyu_eval.js"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,7 @@
   },
   "homepage": "https://github.com/yuqizhang1228-blip/yeyu-mvp#readme",
   "dependencies": {
+    "braintrust": "^3.4.0",
     "dotenv": "^17.3.1",
     "express": "^5.2.1"
   }
