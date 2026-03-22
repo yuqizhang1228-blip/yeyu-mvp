@@ -77,8 +77,19 @@
     background: var(--surface2); border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0;
+    padding: 0; margin: 0; font: inherit; color: inherit;
+    -webkit-appearance: none; appearance: none;
   }
   .icon-btn svg { opacity: 0.6; }
+  /* 氛围音开启：仅外圈与抽屉默认 1px 边框区分；图标亮度/线粗与左侧抽屉一致（svg 共用 .icon-btn svg opacity） */
+  .icon-btn--ambient-on {
+    border-color: rgba(255, 159, 104, 0.35);
+  }
+  .home-ambient-icon-wrap {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%;
+  }
+  .home-ambient-icon-wrap[hidden] { display: none !important; }
 
   /* Orb area */
   .orb-area {
@@ -1268,6 +1279,9 @@
 
 <div class="phone">
 
+  <!-- 循环氛围音：将文件置于 assets/home-ambient.mp3（建议无歌词、可无缝循环的轻量 mp3） -->
+  <audio id="homeAmbientAudio" src="assets/home-ambient.mp3" loop playsinline preload="metadata"></audio>
+
   <!-- HOME SCREEN -->
   <div class="screen active" id="home">
     <div class="statusbar">
@@ -1286,7 +1300,32 @@
         </svg>
       </div>
       <div class="home-date">2026年3月4日，星期三</div>
-      <div class="home-header-spacer" aria-hidden="true"></div>
+      <button type="button" class="icon-btn icon-btn--ambient-on" id="homeAmbientBtn" aria-pressed="true" title="点击静音"
+        onclick="toggleHomeAmbient()">
+        <span class="home-ambient-icon-wrap" id="homeAmbientIconOn" aria-hidden="true">
+          <!-- 与抽屉 icon 对齐：约 16px 栅格；48 viewBox 下 stroke-width≈5.4 → 屏上约 1.8px，等同 16×12 汉堡线粗 -->
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M24 6V42C17 42 11.7985 32.8391 11.7985 32.8391H6C4.89543 32.8391 4 31.9437 4 30.8391V17.0108C4 15.9062 4.89543 15.0108 6 15.0108H11.7985C11.7985 15.0108 17 6 24 6Z" fill="none" stroke="#E2E8F0" stroke-width="5.4" stroke-linejoin="round"/>
+            <path d="M32 15L32 15C32.6232 15.5565 33.1881 16.1797 33.6841 16.8588C35.1387 18.8504 36 21.3223 36 24C36 26.6545 35.1535 29.1067 33.7218 31.0893C33.2168 31.7885 32.6391 32.4293 32 33" stroke="#E2E8F0" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M34.2359 41.1857C40.0836 37.6953 44 31.305 44 24C44 16.8085 40.2043 10.5035 34.507 6.97906" stroke="#E2E8F0" stroke-width="5.4" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="home-ambient-icon-wrap" id="homeAmbientIconOff" hidden aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <mask id="yeyuVolMuteMask" maskUnits="userSpaceOnUse" x="30" y="18" width="13" height="13" style="mask-type: alpha">
+                <rect x="30" y="18" width="13" height="13" fill="#fff"/>
+              </mask>
+            </defs>
+            <rect opacity="0.01" x="30" y="18" width="13" height="13" fill="#E2E8F0"/>
+            <g mask="url(#yeyuVolMuteMask)">
+              <path d="M40.7348 20.2858L32.2495 28.7711" stroke="#E2E8F0" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+              <path d="M32.2496 20.2858L40.7349 28.7711" stroke="#E2E8F0" stroke-width="5.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <path d="M24 6V42C17 42 11.7985 32.8391 11.7985 32.8391H6C4.89543 32.8391 4 31.9437 4 30.8391V17.0108C4 15.9062 4.89543 15.0108 6 15.0108H11.7985C11.7985 15.0108 17 6 24 6Z" fill="none" stroke="#E2E8F0" stroke-width="5.4" stroke-linejoin="round"/>
+          </svg>
+        </span>
+      </button>
     </div>
 
     <div class="orb-area">
@@ -2196,12 +2235,97 @@ function getTimeContext() {
   return { period: '深夜', desc: '翻来覆去，脑子里停不下来' };
 }
 
+const LS_HOME_AMBIENT = 'yeyu_home_ambient';
+const HOME_AMBIENT_VOL = 0.26;
+
+/** 未静音（默认）：localStorage 非 '0' 即视为开启；仅 '0' 表示用户主动静音 */
+function isHomeAmbientOn() {
+  return localStorage.getItem(LS_HOME_AMBIENT) !== '0';
+}
+
+function getHomeAmbientAudio() {
+  return document.getElementById('homeAmbientAudio');
+}
+
+function syncHomeAmbientButton() {
+  const btn = document.getElementById('homeAmbientBtn');
+  const iconOn = document.getElementById('homeAmbientIconOn');
+  const iconOff = document.getElementById('homeAmbientIconOff');
+  if (!btn) return;
+  const on = isHomeAmbientOn();
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  btn.classList.toggle('icon-btn--ambient-on', on);
+  btn.title = on ? '点击静音' : '开启氛围音';
+  if (iconOn) iconOn.hidden = !on;
+  if (iconOff) iconOff.hidden = on;
+}
+
+function pauseHomeAmbient() {
+  const a = getHomeAmbientAudio();
+  if (a && !a.paused) a.pause();
+}
+
+function tryResumeHomeAmbient() {
+  if (!isHomeAmbientOn()) return;
+  const home = document.getElementById('home');
+  if (!home || !home.classList.contains('active')) return;
+  const a = getHomeAmbientAudio();
+  if (!a) return;
+  a.volume = HOME_AMBIENT_VOL;
+  a.play().catch(() => {});
+}
+
+function toggleHomeAmbient() {
+  const a = getHomeAmbientAudio();
+  if (!a) return;
+  const wasOn = isHomeAmbientOn();
+  if (wasOn) {
+    localStorage.setItem(LS_HOME_AMBIENT, '0');
+    syncHomeAmbientButton();
+    a.pause();
+    return;
+  }
+  localStorage.removeItem(LS_HOME_AMBIENT);
+  syncHomeAmbientButton();
+  const home = document.getElementById('home');
+  if (!home || !home.classList.contains('active')) return;
+  a.volume = HOME_AMBIENT_VOL;
+  a.play().catch(() => {
+    localStorage.setItem(LS_HOME_AMBIENT, '0');
+    syncHomeAmbientButton();
+  });
+}
+
+function bindHomeAmbientAutoplayUnlock() {
+  const home = document.getElementById('home');
+  if (!home || home.dataset.ambientUnlockBound === '1') return;
+  if (!isHomeAmbientOn()) return;
+  home.dataset.ambientUnlockBound = '1';
+  const once = () => { tryResumeHomeAmbient(); };
+  home.addEventListener('click', once, { once: true });
+  home.addEventListener('touchend', once, { once: true });
+}
+
+function initHomeAmbient() {
+  const a = getHomeAmbientAudio();
+  const btn = document.getElementById('homeAmbientBtn');
+  if (!a || !btn) return;
+  a.volume = HOME_AMBIENT_VOL;
+  syncHomeAmbientButton();
+  a.addEventListener('error', () => {
+    btn.title = '氛围音（请将 home-ambient.mp3 放入 assets/）';
+  });
+  bindHomeAmbientAutoplayUnlock();
+}
+
 function goHome() {
   document.getElementById('home').classList.add('active');
   document.getElementById('chat').classList.remove('active');
+  tryResumeHomeAmbient();
 }
 
 function startChat(text) {
+  pauseHomeAmbient();
   currentInput = text;
   conversationHistory = [];
   cardGenerated = false;
@@ -2845,6 +2969,7 @@ function showListPage(type) {
   }
 
   renderList('all');
+  pauseHomeAmbient();
   document.getElementById('home').classList.remove('active');
   document.getElementById('chat').classList.remove('active');
   document.getElementById('listPage').classList.add('active');
@@ -2853,6 +2978,7 @@ function showListPage(type) {
 function hideListPage() {
   document.getElementById('listPage').classList.remove('active');
   document.getElementById('home').classList.add('active');
+  tryResumeHomeAmbient();
 }
 
 function switchTab(el, tab) {
@@ -2938,6 +3064,7 @@ function syncOrbTimePeriod() {
 window.addEventListener('load', () => {
   updateProfileOnVisit();
   initHome();
+  initHomeAmbient();
   syncOrbTimePeriod();
   updateStats();
   renderDrawerHistory();
