@@ -2239,6 +2239,15 @@ const LS_HOME_AMBIENT = 'yeyu_home_ambient';
 const HOME_AMBIENT_VOL = 0.26;
 /** 用于取消渐入 rAF；pause / 非渐入 resume 时递增 */
 let homeAmbientFadeToken = 0;
+/** Chrome 等拦截有声 autoplay 时：静音播 + 首次手势再出声；AbortController 取消监听 */
+let homeAmbientUnlockAbort = null;
+
+function cancelHomeAmbientDocumentUnlock() {
+  if (homeAmbientUnlockAbort) {
+    try { homeAmbientUnlockAbort.abort(); } catch (e) {}
+    homeAmbientUnlockAbort = null;
+  }
+}
 
 function runHomeAmbientFadeIn(a, targetVol, token) {
   const t0 = performance.now();
@@ -2279,7 +2288,9 @@ function syncHomeAmbientButton() {
 function pauseHomeAmbient() {
   const a = getHomeAmbientAudio();
   if (!a) return;
+  cancelHomeAmbientDocumentUnlock();
   homeAmbientFadeToken++;
+  a.muted = false;
   if (!a.paused) a.pause();
   a.volume = HOME_AMBIENT_VOL;
 }
@@ -2301,12 +2312,14 @@ function tryResumeHomeAmbient(opts) {
 
   if (!fadeIn) {
     homeAmbientFadeToken++;
+    a.muted = false;
     a.volume = target;
     return a.play().catch(() => {});
   }
 
   homeAmbientFadeToken++;
   const token = homeAmbientFadeToken;
+  a.muted = false;
   a.volume = 0;
   return a.play().then(() => {
     if (token !== homeAmbientFadeToken) return;
@@ -2315,6 +2328,60 @@ function tryResumeHomeAmbient(opts) {
     if (token === homeAmbientFadeToken) a.volume = target;
     return Promise.reject(new Error('ambient_play_failed'));
   });
+}
+
+/**
+ * 有声 autoplay 被拦时：静音 play（Chrome 通常允许），等用户任意一次手势再取消静音并渐入。
+ * 不响应点在氛围音按钮上的手势，避免「想关声音」却先被解静音闪一下。
+ */
+function bindDocumentAmbientUnlock() {
+  cancelHomeAmbientDocumentUnlock();
+  const ac = new AbortController();
+  homeAmbientUnlockAbort = ac;
+  const onFirstGesture = (e) => {
+    if (e.target?.closest?.('#homeAmbientBtn')) return;
+    if (!isHomeAmbientOn()) {
+      ac.abort();
+      homeAmbientUnlockAbort = null;
+      return;
+    }
+    const au = getHomeAmbientAudio();
+    if (!au) {
+      ac.abort();
+      homeAmbientUnlockAbort = null;
+      return;
+    }
+    ac.abort();
+    homeAmbientUnlockAbort = null;
+    if (!au.muted && au.volume > 0.02 && !au.paused) return;
+    homeAmbientFadeToken++;
+    const token = homeAmbientFadeToken;
+    au.muted = false;
+    au.volume = 0;
+    runHomeAmbientFadeIn(au, HOME_AMBIENT_VOL, token);
+  };
+  ['pointerdown', 'keydown', 'touchstart'].forEach((type) => {
+    document.addEventListener(type, onFirstGesture, { capture: true, signal: ac.signal });
+  });
+}
+
+function startMutedAmbientBridge() {
+  if (!isHomeAmbientOn()) return;
+  const home = document.getElementById('home');
+  if (!home || !home.classList.contains('active')) return;
+  const a = getHomeAmbientAudio();
+  if (!a) return;
+  cancelHomeAmbientDocumentUnlock();
+  homeAmbientFadeToken++;
+  a.muted = true;
+  a.volume = HOME_AMBIENT_VOL;
+  a.play().then(() => {
+    if (!isHomeAmbientOn()) {
+      a.pause();
+      return;
+    }
+    bindDocumentAmbientUnlock();
+  }).catch(() => {});
 }
 
 function toggleHomeAmbient() {
@@ -2361,7 +2428,10 @@ function initHomeAmbient() {
     btn.title = '氛围音（请将 home-ambient.mp3 放入 assets/）';
   });
   bindHomeAmbientAutoplayUnlock();
-  tryResumeHomeAmbient({ fadeIn: true });
+  a.muted = false;
+  tryResumeHomeAmbient({ fadeIn: true }).catch(() => {
+    startMutedAmbientBridge();
+  });
 }
 
 function goHome() {
