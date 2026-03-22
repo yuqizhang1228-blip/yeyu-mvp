@@ -22,7 +22,6 @@ app.use(express.static(__dirname, { index: 'index.html' }));
 app.listen(PORT, () => {
   console.log(`✅ 夜屿本地预览已启动: http://localhost:${PORT}`);
   console.log(`   DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? '已设置 ✓' : '未设置 ✗'}`);
-  console.log(`   MINIMAX_API_KEY:  ${process.env.MINIMAX_API_KEY ? '已设置 ✓' : '未设置 ✗（双模型对比需配置）'}`);
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`[ERROR] 端口 ${PORT} 已被占用，请先执行: lsof -ti :${PORT} | xargs kill -9`);

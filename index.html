@@ -62,7 +62,7 @@
 
   /* ===== HOME SCREEN ===== */
   #home {
-    background: radial-gradient(ellipse 60% 40% at 50% 15%, rgba(255,159,104,0.12) 0%, transparent 70%), var(--bg);
+    background: radial-gradient(ellipse 90% 55% at 50% 8%, rgba(255, 159, 104, 0.07) 0%, transparent 62%), var(--bg);
   }
 
   .home-header {
@@ -70,6 +70,8 @@
     display: flex; align-items: center; justify-content: space-between;
   }
   .home-date { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.04em; }
+  /* 与左侧菜单按钮同宽，保持标题区视觉居中 */
+  .home-header-spacer { width: 36px; height: 36px; flex-shrink: 0; }
   .icon-btn {
     width: 36px; height: 36px; border-radius: 50%;
     background: var(--surface2); border: 1px solid var(--border);
@@ -119,37 +121,349 @@
   .name-skip:hover { color: rgba(148,163,184,0.6); }
 
   .orb-wrap {
-    position: relative; width: 140px; height: 140px;
+    position: relative; width: 188px; height: 188px;
     display: flex; align-items: center; justify-content: center;
-    margin-bottom: 28px;
+    margin-bottom: 16px;
   }
-  .orb-glow {
-    position: absolute; inset: -30px;
-    background: radial-gradient(circle, rgba(255,159,104,0.25) 0%, rgba(255,126,95,0.1) 40%, transparent 70%);
+  /* 背后弥散：以形象几何中心为核，由内向外三层径向 + 高模糊；品牌 rgb 同 :root */
+  .orb-flow {
+    position: absolute;
+    inset: -96px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-flow-layer {
+    position: absolute;
+    left: 50%;
+    top: 50%;
     border-radius: 50%;
-    animation: breathe 5s ease-in-out infinite;
+    pointer-events: none;
   }
-  .orb {
-    width: 100px; height: 100px; border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 40%, #FF7E5F 70%, #E8613A);
-    box-shadow: 0 0 40px rgba(255,159,104,0.5), 0 0 80px rgba(255,159,104,0.2), inset 0 0 20px rgba(255,255,255,0.15);
-    animation: float 4s ease-in-out infinite;
-    position: relative; z-index: 1;
+  /* 核：最亮，略呼吸，模拟从 AI 形象向外溢出的能量 */
+  .orb-flow-layer--core {
+    width: 200px;
+    height: 200px;
+    margin-left: -100px;
+    margin-top: -100px;
+    background: radial-gradient(circle at 50% 50%,
+      rgba(255, 159, 104, 0.26) 0%,
+      rgba(255, 126, 95, 0.14) 32%,
+      rgba(255, 126, 95, 0.05) 52%,
+      transparent 70%);
+    filter: blur(38px);
+    opacity: 0.92;
+    animation: orb-flow-core 17s ease-in-out infinite;
   }
-  .orb::after {
-    content: ''; position: absolute;
-    top: 15%; left: 20%; width: 30%; height: 20%;
-    background: rgba(255,255,255,0.3);
-    border-radius: 50%; filter: blur(4px);
+  /* 中层：暖色大面积向外洗开 */
+  .orb-flow-layer--wash {
+    width: 300px;
+    height: 300px;
+    margin-left: -150px;
+    margin-top: -150px;
+    background: radial-gradient(ellipse 92% 92% at 50% 50%,
+      rgba(255, 159, 104, 0.14) 0%,
+      rgba(255, 126, 95, 0.08) 38%,
+      rgba(255, 159, 104, 0.035) 58%,
+      transparent 82%);
+    filter: blur(56px);
+    opacity: 0.88;
+    animation: orb-flow-wash 24s ease-in-out infinite;
+  }
+  /* 外晕：靛色在更远距离混入，形成向外扩散的冷暖过渡 */
+  .orb-flow-layer--aura {
+    width: 360px;
+    height: 360px;
+    margin-left: -180px;
+    margin-top: -180px;
+    background: radial-gradient(ellipse 100% 100% at 50% 50%,
+      rgba(255, 159, 104, 0.05) 0%,
+      rgba(255, 126, 95, 0.045) 35%,
+      rgba(99, 102, 241, 0.09) 58%,
+      rgba(99, 102, 241, 0.035) 76%,
+      transparent 92%);
+    filter: blur(72px);
+    opacity: 0.72;
+    animation: orb-flow-aura 32s ease-in-out infinite;
+    animation-delay: -9s;
+  }
+  /* 贴 AI 轮廓外一圈：短程渐变（较快透明）、blur 较小，叠在其它弥散之上 */
+  .orb-flow-layer--rim {
+    width: 168px;
+    height: 168px;
+    margin-left: -84px;
+    margin-top: -84px;
+    z-index: 1;
+    background: radial-gradient(circle at 50% 50%,
+      rgba(255, 210, 175, 0.2) 0%,
+      rgba(255, 159, 104, 0.24) 30%,
+      rgba(255, 126, 95, 0.11) 48%,
+      transparent 61%);
+    filter: blur(20px);
+    opacity: 0.94;
+    animation: orb-flow-rim 14s ease-in-out infinite;
+  }
+  @keyframes orb-flow-core {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.1); opacity: 1; }
+  }
+  @keyframes orb-flow-wash {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    40% { transform: translate(6px, -5px) scale(1.06); }
+    70% { transform: translate(-5px, 7px) scale(1.02); }
+  }
+  @keyframes orb-flow-aura {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08) translate(-8px, 6px); }
+  }
+  @keyframes orb-flow-rim {
+    0%, 100% { transform: scale(1); opacity: 0.9; }
+    50% { transform: scale(1.035); opacity: 1; }
+  }
+  /* 微粒：轻漂移 */
+  .orb-motes {
+    position: absolute;
+    width: 248px; height: 248px;
+    left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 2;
+  }
+  .orb-mote {
+    position: absolute;
+    width: 3px; height: 3px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.45);
+    box-shadow: 0 0 8px rgba(255,159,104,0.45);
+    animation: orb-mote-drift 16s ease-in-out infinite;
+  }
+  .orb-mote:nth-child(1) { top: 10%; left: 72%; animation-delay: 0s; }
+  .orb-mote:nth-child(2) { top: 78%; left: 14%; animation-delay: -6s; }
+
+  /* 主流星：SVG 直线 x1,y1→x2,y2 即几何斜线（右上→左下），非横条 rotate；dashoffset 让光段沿该斜线滑过 */
+  .orb-streaks {
+    position: absolute;
+    width: 248px;
+    height: 248px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    /* 须高于 .orb(z-index:3)，否则斜线整段落在 PNG 背后，峰值恰在核心处等于不可见 */
+    z-index: 4;
+    overflow: visible;
+  }
+  .orb-meteor-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    pointer-events: none;
+    overflow: visible;
+  }
+  .orb-meteor-line {
+    fill: none;
+    stroke: url(#orbMeteorGrad);
+    stroke-width: 1.15;
+    stroke-linecap: round;
+    stroke-dasharray: 48 352;
+    stroke-dashoffset: 420;
+    opacity: 0;
+    filter: drop-shadow(0 0 3px rgba(255, 175, 145, 0.28));
+    /* 长周期 + 短划过；opacity 与 dash 同步：右上缘弱 → 经核心背后最强 → 左下缘弱（萤火虫式层次） */
+    animation: orb-meteor-line 28s linear infinite;
+  }
+  @keyframes orb-meteor-line {
+    0%, 88% { opacity: 0; stroke-dashoffset: 420; }
+    88.35% { opacity: 0.1; stroke-dashoffset: 398; }
+    89% { opacity: 0.24; stroke-dashoffset: 332; }
+    89.85% { opacity: 0.52; stroke-dashoffset: 248; }
+    90.65% { opacity: 0.78; stroke-dashoffset: 175; }
+    91.4% { opacity: 1; stroke-dashoffset: 118; }
+    92.15% { opacity: 0.88; stroke-dashoffset: 62; }
+    92.9% { opacity: 0.42; stroke-dashoffset: 8; }
+    93.65% { opacity: 0.14; stroke-dashoffset: -48; }
+    94.35%, 100% { opacity: 0; stroke-dashoffset: -140; }
   }
 
-  @keyframes breathe {
-    0%, 100% { transform: scale(1); opacity: 0.8; }
-    50% { transform: scale(1.08); opacity: 1; }
+  /* 萤火虫光点：压在细线之上、形象之下 */
+  .orb-sparks {
+    position: absolute;
+    width: 248px;
+    height: 248px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    /* 高于流星(z-index:4)，光点不被斜线盖住 */
+    z-index: 5;
   }
-  @keyframes float {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-8px); }
+  .orb-spark {
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    margin-left: -1.5px;
+    margin-top: -1.5px;
+    border-radius: 50%;
+    background: rgba(255, 252, 245, 0.96);
+    box-shadow:
+      0 0 2px rgba(255, 255, 255, 0.8),
+      0 0 7px rgba(255, 159, 104, 0.45),
+      0 0 12px rgba(255, 126, 95, 0.15);
+  }
+  .orb-spark:nth-child(1),
+  .orb-spark:nth-child(4),
+  .orb-spark:nth-child(7) {
+    box-shadow:
+      0 0 3px rgba(255, 255, 255, 0.98),
+      0 0 10px rgba(255, 159, 104, 0.68),
+      0 0 18px rgba(255, 126, 95, 0.28);
+  }
+  .orb-spark:nth-child(2),
+  .orb-spark:nth-child(5),
+  .orb-spark:nth-child(8) {
+    box-shadow:
+      0 0 1px rgba(255, 255, 255, 0.38),
+      0 0 4px rgba(255, 159, 104, 0.3),
+      0 0 8px rgba(255, 126, 95, 0.09);
+  }
+  @keyframes orb-spark-ne-move {
+    0%, 100% { transform: translate(0, 0) scale(0.9); }
+    50% { transform: translate(12px, -9px) scale(1.03); }
+  }
+  @keyframes orb-spark-se-move {
+    0%, 100% { transform: translate(0, 0) scale(0.91); }
+    50% { transform: translate(11px, 11px) scale(1.03); }
+  }
+  @keyframes orb-spark-sw-move {
+    0%, 100% { transform: translate(0, 0) scale(0.9); }
+    50% { transform: translate(-12px, 10px) scale(1.03); }
+  }
+  @keyframes orb-spark-nw-move {
+    0%, 100% { transform: translate(0, 0) scale(0.91); }
+    50% { transform: translate(-10px, -9px) scale(1.03); }
+  }
+  @keyframes orb-spark-tier-bright {
+    0%, 100% { opacity: 0.14; }
+    50% { opacity: 0.9; }
+  }
+  @keyframes orb-spark-tier-mid {
+    0%, 100% { opacity: 0.09; }
+    50% { opacity: 0.48; }
+  }
+  @keyframes orb-spark-tier-dim {
+    0%, 100% { opacity: 0.05; }
+    50% { opacity: 0.18; }
+  }
+  .orb-spark:nth-child(1) {
+    top: 26%; left: 60%;
+    animation:
+      orb-spark-ne-move 3.4s ease-in-out 0s infinite,
+      orb-spark-tier-bright 3.4s ease-in-out 0s infinite;
+  }
+  .orb-spark:nth-child(2) {
+    top: 40%; left: 76%;
+    animation:
+      orb-spark-se-move 3.75s ease-in-out -0.55s infinite,
+      orb-spark-tier-dim 3.75s ease-in-out -0.55s infinite;
+  }
+  .orb-spark:nth-child(3) {
+    top: 64%; left: 70%;
+    animation:
+      orb-spark-sw-move 3.55s ease-in-out -2s infinite,
+      orb-spark-tier-mid 3.55s ease-in-out -2s infinite;
+  }
+  .orb-spark:nth-child(4) {
+    top: 74%; left: 46%;
+    animation:
+      orb-spark-nw-move 3.95s ease-in-out -0.4s infinite,
+      orb-spark-tier-bright 3.95s ease-in-out -0.4s infinite;
+  }
+  .orb-spark:nth-child(5) {
+    top: 66%; left: 26%;
+    animation:
+      orb-spark-ne-move 3.65s ease-in-out -2.85s infinite,
+      orb-spark-tier-dim 3.65s ease-in-out -2.85s infinite;
+  }
+  .orb-spark:nth-child(6) {
+    top: 46%; left: 20%;
+    animation:
+      orb-spark-se-move 3.3s ease-in-out -1.2s infinite,
+      orb-spark-tier-mid 3.3s ease-in-out -1.2s infinite;
+  }
+  .orb-spark:nth-child(7) {
+    top: 28%; left: 30%;
+    animation:
+      orb-spark-sw-move 3.85s ease-in-out -1.65s infinite,
+      orb-spark-tier-bright 3.85s ease-in-out -1.65s infinite;
+  }
+  .orb-spark:nth-child(8) {
+    top: 22%; left: 48%;
+    animation:
+      orb-spark-nw-move 3.5s ease-in-out -3.1s infinite,
+      orb-spark-tier-dim 3.5s ease-in-out -3.1s infinite;
+  }
+
+  /* 主形象：简单模式 — 单张透明底整图 orb-hero.png */
+  .orb {
+    width: 140px;
+    height: 140px;
+    border-radius: 0;
+    animation: orb-drift 7.5s ease-in-out infinite;
+    position: relative;
+    z-index: 3;
+    overflow: visible;
+    flex-shrink: 0;
+    box-shadow: none;
+    background: transparent;
+    filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.52))
+      drop-shadow(0 0 32px rgba(255, 159, 104, 0.16))
+      drop-shadow(0 0 56px rgba(255, 126, 95, 0.07));
+  }
+  .orb-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    border-radius: 0;
+    display: block;
+    pointer-events: none;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  @keyframes orb-mote-drift {
+    0%, 100% { transform: translate(0, 0); opacity: 0.2; }
+    35% { transform: translate(-5px, 3px); opacity: 0.5; }
+    70% { transform: translate(4px, -2px); opacity: 0.35; }
+  }
+  @keyframes orb-drift {
+    0%, 100% { transform: translate(0, 0); }
+    25% { transform: translate(2px, -5px); }
+    50% { transform: translate(-2px, -9px); }
+    75% { transform: translate(-4px, -4px); }
+  }
+
+  /* 时段微调（由 JS 写入 data-time-period；与 drop-shadow 合并为一条 filter） */
+  .orb-wrap[data-time-period="深夜"] .orb {
+    filter: saturate(0.94) brightness(0.96) drop-shadow(0 20px 36px rgba(0, 0, 0, 0.52))
+      drop-shadow(0 0 32px rgba(255, 159, 104, 0.11))
+      drop-shadow(0 0 56px rgba(255, 126, 95, 0.05));
+  }
+  .orb-wrap[data-time-period="清晨"] .orb,
+  .orb-wrap[data-time-period="上午"] .orb {
+    filter: saturate(1.04) brightness(1.02) drop-shadow(0 20px 36px rgba(0, 0, 0, 0.52))
+      drop-shadow(0 0 32px rgba(255, 159, 104, 0.19))
+      drop-shadow(0 0 56px rgba(255, 126, 95, 0.09));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .orb-flow-layer, .orb-flow, .orb, .orb-mote, .orb-spark, .orb-meteor-line, .chat-orb-mini {
+      animation: none !important;
+    }
+    .orb-flow-layer, .orb-flow, .orb, .orb-spark, .chat-orb-mini { transform: none !important; }
+    .orb-meteor-line { opacity: 0 !important; filter: none !important; }
+    .orb-spark { opacity: 0.38 !important; }
   }
 
   .home-greeting { font-size: 15px; color: var(--text-secondary); text-align: center; line-height: 1.6; }
@@ -170,14 +484,72 @@
     padding: 0 20px 16px;
   }
   .quick-chips::-webkit-scrollbar { display: none; }
-  .chip {
-    flex-shrink: 0; padding: 12px 16px;
+  /*
+   * 快捷卡片固定约三行高的可视区；正文不强制换行符，由宽度自然从左到右、自上而下折行。
+   * 骨架仍用三行 shimmer 对齐外框高度。
+   */
+  .quick-chips .chip {
+    flex-shrink: 0;
+    width: 164px;
+    height: calc(24px + 13px * 1.5 * 3);
+    padding-block: 12px;
+    padding-inline: 14px;
     background: var(--surface); border: 1px solid var(--border);
     border-radius: var(--radius-card); cursor: pointer;
     font-size: 13px; color: var(--text-secondary); line-height: 1.5;
-    max-width: 160px; transition: all 0.2s ease;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    box-sizing: border-box;
   }
-  .chip:hover { border-color: rgba(255,159,104,0.3); color: var(--text-primary); background: rgba(255,159,104,0.05); }
+  .quick-chips .chip:not(.chip-skeleton) {
+    white-space: normal;
+    overflow-wrap: break-word;
+    word-break: normal;
+    overflow: hidden;
+  }
+  .quick-chips .chip:hover { border-color: rgba(255,159,104,0.3); color: var(--text-primary); background: rgba(255,159,104,0.05); }
+
+  /* 快捷场景骨架：与文字卡片同高，内为三行占位条 */
+  .chip.chip-skeleton {
+    cursor: default;
+    pointer-events: none;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: stretch;
+    gap: 6px;
+  }
+  .chip-skeleton-line {
+    display: block;
+    height: 9px;
+    border-radius: 5px;
+    background: rgba(255,255,255,0.06);
+    position: relative;
+    overflow: hidden;
+  }
+  .chip-skeleton-line--long { width: 100%; }
+  .chip-skeleton-line--mid { width: 84%; }
+  .chip-skeleton-line--short { width: 62%; }
+  .chip-skeleton-line::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      rgba(255,255,255,0.14) 45%,
+      transparent 90%
+    );
+    transform: translateX(-100%);
+    animation: chip-skeleton-shimmer 1.35s ease-in-out infinite;
+  }
+  .chip-skeleton:nth-child(2) .chip-skeleton-line::after { animation-delay: 0.2s; }
+  .chip-skeleton:nth-child(3) .chip-skeleton-line::after { animation-delay: 0.4s; }
+  .chip-skeleton:nth-child(4) .chip-skeleton-line::after { animation-delay: 0.55s; }
+  .chip-skeleton:nth-child(5) .chip-skeleton-line::after { animation-delay: 0.7s; }
+  @keyframes chip-skeleton-shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+  }
 
   /* Input area */
   .input-wrap {
@@ -395,6 +767,7 @@
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
+  .chat-header-titles { flex: 1; min-width: 0; }
   .back-btn {
     width: 36px; height: 36px; border-radius: 50%;
     background: var(--surface2); border: 1px solid var(--border);
@@ -406,6 +779,11 @@
     background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 50%, #FF7E5F);
     box-shadow: 0 0 12px rgba(255,159,104,0.4);
     flex-shrink: 0;
+    animation: orb-mini-breathe 6.5s ease-in-out infinite;
+  }
+  @keyframes orb-mini-breathe {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 12px rgba(255,159,104,0.38); }
+    50% { transform: scale(1.06); box-shadow: 0 0 18px rgba(255,159,104,0.55); }
   }
   .chat-title { font-size: 15px; color: var(--text-primary); font-weight: 500; }
   .chat-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
@@ -418,9 +796,19 @@
   }
   .messages::-webkit-scrollbar { display: none; }
 
-  .msg { display: flex; flex-direction: column; max-width: 80%; animation: msgIn 0.3s ease; }
-  .msg.user { align-self: flex-end; align-items: flex-end; }
-  .msg.ai { align-self: flex-start; align-items: flex-start; }
+  .msg {
+    display: flex; flex-direction: column;
+    animation: msgIn 0.3s ease;
+  }
+  /* 用户更窄、更「便签」；AI 更宽、更「承接区」，扫读对比更强 */
+  .msg.user {
+    align-self: flex-end; align-items: flex-end;
+    max-width: 72%;
+  }
+  .msg.ai {
+    align-self: flex-start; align-items: flex-start;
+    max-width: 92%;
+  }
 
   @keyframes msgIn {
     from { opacity: 0; transform: translateY(10px); }
@@ -429,29 +817,35 @@
 
   .bubble {
     padding: 12px 16px; border-radius: var(--radius-bubble);
-    font-size: 15px; line-height: 1.65; color: var(--text-primary);
+    font-size: 15px;
   }
+  /* 用户：扁平冷灰块，无暖色、弱阴影 —— 明确是「我发出的短条」 */
   .msg.user .bubble {
-    background: var(--surface); border: 1px solid var(--border);
+    line-height: 1.62;
+    color: #F1F5F9;
+    background: rgba(36, 41, 54, 0.78);
+    border: 1px solid rgba(71, 85, 105, 0.36);
     border-bottom-right-radius: 6px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.032);
   }
+  /* AI：与用户同一套「实心块 + 细边 + 一角小圆角」，仅色相偏暖以区分，无渐变、无磨砂 */
   .msg.ai .bubble {
-    background: rgba(255,255,255,0.04); border: 1px solid var(--border);
-    border-bottom-left-radius: 6px; backdrop-filter: blur(10px);
+    line-height: 1.62;
+    color: #F1F5F9;
+    background: rgba(46, 38, 36, 0.78);
+    border: 1px solid rgba(120, 88, 76, 0.34);
+    border-bottom-left-radius: 6px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.032);
   }
   .msg-time { font-size: 11px; color: rgba(148,163,184,0.4); margin-top: 4px; padding: 0 4px; }
-  .msg-provider { font-size: 10px; color: rgba(148,163,184,0.35); margin-top: 2px; padding: 0 4px; letter-spacing: 0.03em; }
+  .msg.user .msg-time,
+  .msg.ai .msg-time { color: rgba(148, 163, 184, 0.42); }
 
-  /* Thinking indicator — 大形象版 */
+  /* Thinking：仅文案，顶栏已有小光球形象 */
   .thinking {
-    display: flex; align-items: center; gap: 12px;
-    padding: 4px 0; animation: msgIn 0.3s ease;
+    display: flex; align-items: center;
+    padding: 6px 4px 8px; animation: msgIn 0.3s ease;
     align-self: flex-start;
-  }
-  .thinking-orb {
-    width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
-    background: radial-gradient(circle at 35% 35%, #FFB887, #FF9F68 50%, #FF7E5F);
-    animation: pulse 1.5s ease-in-out infinite;
   }
   @keyframes pulse {
     0%, 100% { box-shadow: 0 0 8px rgba(255,159,104,0.3); }
@@ -892,17 +1286,47 @@
         </svg>
       </div>
       <div class="home-date">2026年3月4日，星期三</div>
-      <div class="icon-btn" onclick="newChat()" title="新建对话" id="newChatBtn" style="visibility:hidden">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-      </div>
+      <div class="home-header-spacer" aria-hidden="true"></div>
     </div>
 
     <div class="orb-area">
-      <div class="orb-wrap">
-        <div class="orb-glow"></div>
-        <div class="orb"></div>
+      <div class="orb-wrap" id="orbWrap">
+        <div class="orb-flow" aria-hidden="true">
+          <span class="orb-flow-layer orb-flow-layer--core"></span>
+          <span class="orb-flow-layer orb-flow-layer--wash"></span>
+          <span class="orb-flow-layer orb-flow-layer--aura"></span>
+          <span class="orb-flow-layer orb-flow-layer--rim"></span>
+        </div>
+        <div class="orb-motes" aria-hidden="true">
+          <span class="orb-mote"></span>
+          <span class="orb-mote"></span>
+        </div>
+        <div class="orb-streaks" aria-hidden="true">
+          <svg class="orb-meteor-svg" viewBox="0 0 248 248" width="248" height="248" focusable="false">
+            <defs>
+              <linearGradient id="orbMeteorGrad" gradientUnits="userSpaceOnUse" x1="232" y1="16" x2="16" y2="232">
+                <stop offset="0%" stop-color="#FFF2E8" stop-opacity="0.95"/>
+                <stop offset="18%" stop-color="#FFE8D6" stop-opacity="0.9"/>
+                <stop offset="42%" stop-color="#FF9F68" stop-opacity="0.58"/>
+                <stop offset="100%" stop-color="#FF7E5F" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <line class="orb-meteor-line" x1="232" y1="16" x2="16" y2="232"/>
+          </svg>
+        </div>
+        <div class="orb-sparks" aria-hidden="true">
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+          <span class="orb-spark"></span>
+        </div>
+        <div class="orb">
+          <img class="orb-img" src="assets/orb-hero.png" alt="" width="140" height="140" decoding="async" />
+        </div>
       </div>
 
       <!-- 首次进入：设置名字 -->
@@ -961,9 +1385,14 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
       </div>
       <div class="chat-orb-mini" id="chatOrb"></div>
-      <div>
+      <div class="chat-header-titles">
         <div class="chat-title">夜屿</div>
         <div class="chat-subtitle" id="chatStatus">正在陪伴</div>
+      </div>
+      <div class="icon-btn" onclick="newChat()" title="新建对话" id="newChatBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
       </div>
     </div>
 
@@ -1302,11 +1731,41 @@
     </div>
   </div>
 <script>
-function newChat() {
-  const input = document.getElementById('homeInput');
-  input.value = '';
-  input.style.height = 'auto';
-  input.focus();
+async function newChat() {
+  if (isThinking) return;
+  removeThinking();
+
+  const hasUser = conversationHistory.some(m => m.role === 'user');
+  const hasAssistant = conversationHistory.some(m => m.role === 'assistant');
+  const shouldArchive = hasUser && hasAssistant && !historySavedForCurrentSession;
+  if (shouldArchive) {
+    const title = (await generateHistoryTitle()) || '一次未完成的对话';
+    addHistory(title, false);
+  }
+
+  conversationHistory = [];
+  cardGenerated = false;
+  msgCount = 0;
+  currentInput = '';
+  document.getElementById('messages').innerHTML = '';
+  document.getElementById('actionCardWrap').style.display = 'none';
+  document.getElementById('cardBar').classList.remove('show');
+  document.getElementById('cardBarChevron').classList.remove('open');
+  document.getElementById('chatInputWrap').style.display = 'flex';
+  document.getElementById('chatInputWrap').classList.remove('thinking-state');
+  const ci = document.getElementById('chatInput');
+  ci.value = '';
+  ci.style.height = 'auto';
+  ci.placeholder = '说点什么…';
+  document.getElementById('chatStatus').textContent = '正在陪伴';
+  document.getElementById('chatTime').textContent = now();
+
+  goHome();
+  const homeWrap = document.getElementById('home-input-wrap');
+  const hi = document.getElementById('homeInput');
+  if (hi && homeWrap && homeWrap.style.display !== 'none') {
+    setTimeout(() => hi.focus(), 150);
+  }
 }
 
 // 用户名状态（模拟MMKV本地存储）
@@ -1335,12 +1794,66 @@ function confirmName(skip) {
   showNormalHome();
 }
 
+/** 快捷场景数量（骨架条数、接口解析、静态 fallback 均一致） */
+const QUICK_CHIP_COUNT = 5;
+/** 卡片宽约三行可视区，中文约 9～10 字/行；超出则兜底截断避免折成第四行 */
+const QUICK_CHIP_MAX_CHARS = 40;
+
+/** 快捷场景：接口失败时的 fallback（连续文案，由卡片宽度自然折行） */
+const STATIC_CHIP_LABELS = [
+  '会上被当众否了，话很难听，脸上发烧想躲。',
+  '绩效又被压一档，说不清哪里不对，开始怀疑自己。',
+  '被项目架空了，说话没人接，不知道自己还重不重要。',
+  '消息显示已读却迟迟没回，忍不住一遍遍看手机。',
+  '和父母通完电话，心里又堵又空，说不清谁对谁错。'
+];
+
+function mountChipSkeletons(wrap) {
+  wrap.innerHTML = '';
+  const skel =
+    '<span class="chip-skeleton-line chip-skeleton-line--long"></span>' +
+    '<span class="chip-skeleton-line chip-skeleton-line--mid"></span>' +
+    '<span class="chip-skeleton-line chip-skeleton-line--short"></span>';
+  for (let i = 0; i < QUICK_CHIP_COUNT; i++) {
+    const el = document.createElement('div');
+    el.className = 'chip chip-skeleton';
+    el.setAttribute('aria-hidden', 'true');
+    el.innerHTML = skel;
+    wrap.appendChild(el);
+  }
+}
+
+function normalizeChipLabelText(s) {
+  return String(s || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\s*\n+\s*/g, ' ')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function finalizeChipLabel(s) {
+  const t = normalizeChipLabelText(s);
+  if (t.length <= QUICK_CHIP_MAX_CHARS) return t;
+  return t.slice(0, QUICK_CHIP_MAX_CHARS - 1) + '…';
+}
+
+function mountChips(wrap, labels) {
+  wrap.innerHTML = '';
+  labels.slice(0, QUICK_CHIP_COUNT).forEach(raw => {
+    const label = finalizeChipLabel(raw);
+    const el = document.createElement('div');
+    el.className = 'chip';
+    el.textContent = label;
+    el.onclick = () => startChat(label);
+    wrap.appendChild(el);
+  });
+}
+
 async function generateChips() {
   const wrap = document.getElementById('quick-chips-wrap');
-  wrap.innerHTML = '<div class="chip" style="opacity:0.4;pointer-events:none">生成中…</div>';
-
-  // 根据时间段调整场景生成提示
   const timeCtx = getTimeContext();
+  mountChipSkeletons(wrap);
+
   let timeHint = '';
   if (timeCtx.period === '清晨') timeHint = '这个时段通常是：刚醒，可能带着昨晚的情绪，或担心今天。';
   else if (timeCtx.period === '上午') timeHint = '这个时段通常是：工作中，刚经历职场冲突，或被消息刺痛。';
@@ -1350,45 +1863,50 @@ async function generateChips() {
   else timeHint = '这个时段通常是：翻来覆去，脑子里停不下来。';
 
   try {
+    const chipMessages = [
+      {
+        role: 'system',
+        content: `你是夜屿的Chip生成助手。现在用户打开应用的时间是「${timeCtx.period}」。${timeHint}
+
+生成5个让用户一看就"被点到"的情绪场景。每个场景是一段连续的中文口语，第一人称，像${timeCtx.period}时心里会闪过的话。
+若上面还有一条「本地记忆摘要」system 消息：请优先根据摘要里的主题、念头、备忘来选题，使至少一半场景让这位用户觉得「像在说我」；摘要里没有的信息不要编造具体身份。若无摘要，则按通用人群写即可。
+重要：不要用换行符、不要用列表符号；从左写到右，由界面按卡片宽度自动折行。每条必须在「约三行以内」就能读完整、说清一件事：卡片很窄（约三行折满），单条总字数含标点请控制在36字以内，宁可短而准，不要堆细节。
+
+其它要求：
+1.具体、有画面感，贴合${timeCtx.period}的典型情绪场景
+2.五个场景尽量分散：职场或学业、亲密关系或友情、自我感受、家庭相关、社交或自我价值感等（不必贴标签，但要明显不同）
+3.${timeCtx.period === '深夜' ? '可以稍微更私密、更难释怀一些，因为深夜人更脆弱' : '贴合当前时段的真实困扰'}
+4.不用病理化词汇；5.只输出JSON数组，恰好5个字符串，格式：["...","...","...","...","..."]`
+      }
+    ];
+    const chipMem = getProfileSummaryForChips();
+    if (chipMem) {
+      chipMessages.push({ role: 'system', content: chipMem });
+    }
+    chipMessages.push({
+      role: 'user',
+      content: `生成5个${timeCtx.period}可能遇到的情绪场景。尽量贴近上述摘要里这位使用者的真实纹理；没有摘要则写通用场景。`
+    });
+
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         model: 'deepseek-chat',
-        max_tokens: 200,
-        messages: [
-          {
-            role: 'system',
-            content: `你是夜屿的Chip生成助手。现在用户打开应用的时间是「${timeCtx.period}」。${timeHint}
-
-生成3个让用户一看就"被点到"的情绪场景，每个用一句话描述（10-16字），第一人称，像${timeCtx.period}时朋友间会说的那种话。要求：
-1.具体、有画面感，贴合${timeCtx.period}的典型情绪场景
-2.三个覆盖不同类型：职场/学业一个、关系一个、自我感受一个
-3.${timeCtx.period === '深夜' ? '可以稍微更私密、更难释怀一些，因为深夜人更脆弱' : '贴合当前时段的真实困扰'}
-4.不用病理化词汇；5.直接输出JSON数组，格式：["场景1","场景2","场景3"]`
-          },
-          { role: 'user', content: `生成3个${timeCtx.period}可能遇到的情绪场景` }
-        ]
+        max_tokens: 320,
+        messages: chipMessages
       })
     });
     const data = await response.json();
+    if (!response.ok || data.error) throw new Error('chip_api');
     const text = data.choices?.[0]?.message?.content?.trim() || '';
     const chips = JSON.parse(text);
-    wrap.innerHTML = '';
-    chips.forEach(label => {
-      const el = document.createElement('div');
-      el.className = 'chip';
-      el.textContent = label;
-      el.onclick = () => startChat(label);
-      wrap.appendChild(el);
-    });
-  } catch(e) {
-    // fallback to static chips
-    wrap.innerHTML = `
-      <div class="chip" onclick="startChat('今天开会被当众否掉，很难受')">今天开会被当众否掉，很难受</div>
-      <div class="chip" onclick="startChat('绩效又被压了，开始怀疑自己')">绩效又被压了，开始怀疑自己</div>
-      <div class="chip" onclick="startChat('被项目架空，不知道自己还重不重要')">被项目架空，不知道自己还重不重要</div>
-    `;
+    if (!Array.isArray(chips) || chips.length < QUICK_CHIP_COUNT) throw new Error('chip_parse');
+    const labels = chips.slice(0, QUICK_CHIP_COUNT).map(x => finalizeChipLabel(x)).filter(Boolean);
+    if (labels.length < QUICK_CHIP_COUNT) throw new Error('chip_short');
+    mountChips(wrap, labels);
+  } catch (e) {
+    mountChips(wrap, STATIC_CHIP_LABELS);
   }
 }
 
@@ -1413,8 +1931,6 @@ function showNormalHome() {
     chips.style.display = 'flex';
     generateChips();
     inputWrap.style.display = 'flex';
-    // ⑥ 名字确认后才显示新建对话按钮
-    document.getElementById('newChatBtn').style.visibility = 'visible';
     setTimeout(() => { greeting.style.opacity = '1'; }, 50);
   }, 300);
 
@@ -1465,6 +1981,8 @@ function confirmClearData() {
 // ─── 对话历史 ─────────────────────────────────────────────────
 let conversationHistory = [];
 let cardGenerated = false;
+/** 本轮是否已写入 yeyu_history（含行动卡片触发的入库），用于「+」离开时避免重复归档 */
+let historySavedForCurrentSession = false;
 
 const SYSTEM_PROMPT = `你是「夜屿」小岛的守夜人，一个有时间感的情绪陪伴者。不是心理医生，不诊断、不开处方。你更像一个清醒、有耐心的朋友，安静地陪人把堵在胸口的那件事理一理——帮对方看清脑子里那句挥之不去的扎心念头，换一个松一点的角度，再找到一件今晚能做的具体小事。
 
@@ -1560,26 +2078,6 @@ function getChatPayload() {
   };
 }
 
-// 开发者测试：ds/mm 切换模型，model 查询当前模型
-function trySwitchModel(text) {
-  const t = (text || '').trim().toLowerCase();
-  if (t === 'ds') {
-    currentProvider = 'deepseek';
-    addMsg('ai', '已切换为 DeepSeek');
-    return true;
-  }
-  if (t === 'mm') {
-    currentProvider = 'minimax';
-    addMsg('ai', '已切换为 MINIMAX');
-    return true;
-  }
-  if (t === 'model') {
-    addMsg('ai', currentProvider === 'deepseek' ? '当前模型：DeepSeek' : '当前模型：MINIMAX', { provider: currentProvider });
-    return true;
-  }
-  return false;
-}
-
 async function callAI(userMessage) {
   conversationHistory.push({ role: 'user', content: userMessage });
 
@@ -1590,14 +2088,14 @@ async function callAI(userMessage) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, provider: currentProvider })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
 
     if (!res.ok || data.error) {
       removeThinking();
       const errMsg = typeof data.error === 'string' ? data.error : (data.error?.message || '接口异常，请稍后重试');
-      addMsg('ai', errMsg, { provider: currentProvider });
+      addMsg('ai', errMsg);
       conversationHistory.pop();
       return;
     }
@@ -1612,7 +2110,7 @@ async function callAI(userMessage) {
       const displayText = fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim();
       addTransition('我们来把今晚的整理一下');
       setTimeout(() => {
-        if (displayText) addMsg('ai', displayText, { provider: currentProvider });
+        if (displayText) addMsg('ai', displayText);
         try {
           const cardData = JSON.parse(cardMatch[1].trim());
           addCard(cardData);
@@ -1622,11 +2120,11 @@ async function callAI(userMessage) {
         }
       }, 600);
     } else {
-      addMsg('ai', fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim(), { provider: currentProvider });
+      addMsg('ai', fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim());
     }
   } catch(err) {
     removeThinking();
-    addMsg('ai', '网络好像有点问题，稍后再试试？', { provider: currentProvider });
+    addMsg('ai', '网络好像有点问题，稍后再试试？');
   }
 }
 
@@ -1634,7 +2132,6 @@ async function callAI(userMessage) {
 let isThinking = false;
 let msgCount = 0;
 let currentInput = '';
-let currentProvider = 'deepseek'; // 开发者测试：对话里输入 ds / mm 切换
 let greetingSubtitleTimer = null;
 
 function now() {
@@ -1708,6 +2205,7 @@ function startChat(text) {
   currentInput = text;
   conversationHistory = [];
   cardGenerated = false;
+  historySavedForCurrentSession = false;
   msgCount = 0;
 
   document.getElementById('home').classList.remove('active');
@@ -1740,7 +2238,6 @@ function sendMsg() {
   if (!text || isThinking) return;
   input.value = ''; input.style.height = 'auto';
   addMsg('user', text);
-  if (trySwitchModel(text)) return; // 开发者：ds/mm 切换模型，不进入对话历史
   msgCount++;
   callAI(text);
 }
@@ -1752,16 +2249,14 @@ function showThinkingThen(cb) {
   setTimeout(() => { removeThinking(); cb(); }, delay);
 }
 
-function addMsg(role, text, opts) {
-  opts = opts || {};
+function addMsg(role, text) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
   const timeStr = now();
-  const providerLabel = (role === 'ai' && opts.provider) ? `<div class="msg-provider">${opts.provider === 'minimax' ? 'MINIMAX' : 'DeepSeek'}</div>` : '';
 
   if (role === 'ai') {
-    div.innerHTML = `<div class="bubble"></div><div class="msg-time">${timeStr}</div>${providerLabel}`;
+    div.innerHTML = `<div class="bubble"></div><div class="msg-time">${timeStr}</div>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
     const bubble = div.querySelector('.bubble');
@@ -1798,7 +2293,7 @@ function addThinking() {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.id = 'thinking'; div.className = 'thinking';
-  div.innerHTML = `<div class="thinking-orb"></div><div class="thinking-text">思考中<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`;
+  div.innerHTML = `<div class="thinking-text">思考中<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   isThinking = true;
@@ -1955,6 +2450,8 @@ function flyDotToDrawer() {
 }
 
 function showActionCard(cardData) {
+  // 先于异步标题生成置位，避免用户立刻点「+」时与未完成入库竞态导致重复一条历史
+  historySavedForCurrentSession = true;
   if (cardData) {
     document.querySelector('.action-card-thought').textContent = cardData.thought || '';
     document.querySelector('.action-card-new').textContent = cardData.reframe || '';
@@ -2142,6 +2639,43 @@ function getProfileSummaryForSystem() {
   }
   if (!parts.length) return '';
   return '【关于这个人的一些小笔记】请把下面的信息当作对方长期使用时留下的纹理，而不是本轮对话里的内容：' + parts.join('');
+}
+
+/** 供快捷场景生成：浓缩画像，引导选题贴近此人（不含对话原文） */
+function getProfileSummaryForChips() {
+  const p = userProfile;
+  if (!p) return '';
+  const lines = [];
+  const name = (typeof userName === 'string' && userName && userName !== '你') ? userName.trim() : '';
+  if (name) {
+    lines.push(`对方常用称呼：${name}（场景文案仍用第一人称「我」，不要写进这个名字）。`);
+  }
+  if (p.visitCount && p.visitCount > 1) {
+    lines.push(`累计使用约 ${p.visitCount} 次，可理解为回访用户。`);
+  }
+  if (Array.isArray(p.preferredTimeSlots) && p.preferredTimeSlots.length) {
+    lines.push(`常出现的来访时段：${p.preferredTimeSlots.slice(0, 4).join('、')}。`);
+  }
+  if (Array.isArray(p.commonThemes) && p.commonThemes.length) {
+    lines.push(`近期对话里常出现的主题：${p.commonThemes.slice(0, 4).join('、')}——请让至少 2 条场景明显落在这条压力线或邻近变体上。`);
+  }
+  if (Array.isArray(p.recentCardTopics) && p.recentCardTopics.length) {
+    lines.push(`最近行动卡片常围绕的念头：${p.recentCardTopics.slice(0, 3).map(t => `「${t}」`).join('、')}——可做同主题下的新切口，不要复述原句。`);
+  }
+  if (p.manualNote && String(p.manualNote).trim()) {
+    const note = String(p.manualNote).trim().slice(0, 220);
+    lines.push(`对方在设置里写下的备忘（摘录）：${note}`);
+  }
+  try {
+    const hist = getHistory();
+    const titles = (Array.isArray(hist) ? hist : []).slice(0, 8).map(h => (h && h.title) ? String(h.title).trim() : '').filter(Boolean);
+    if (titles.length) {
+      const uniq = [...new Set(titles)].slice(0, 5);
+      lines.push(`最近几次梳理留下的话题线索（勿照抄成快捷句）：${uniq.join('；')}——可写同一压力类型的全新一时一刻。`);
+    }
+  } catch (e) {}
+  if (!lines.length) return '';
+  return '【本地记忆摘要——仅用于你选「更可能点中 TA」的场景方向，勿在输出 JSON 里暴露备注原文】\n' + lines.join('\n');
 }
 
 function getUserId() {
@@ -2392,10 +2926,19 @@ function resetName() {
   location.reload();
 }
 
+function syncOrbTimePeriod() {
+  const wrap = document.getElementById('orbWrap');
+  if (!wrap) return;
+  try {
+    wrap.dataset.timePeriod = getTimeContext().period;
+  } catch (e) {}
+}
+
 // 页面加载
 window.addEventListener('load', () => {
   updateProfileOnVisit();
   initHome();
+  syncOrbTimePeriod();
   updateStats();
   renderDrawerHistory();
   bindMemoryNoteInput();
