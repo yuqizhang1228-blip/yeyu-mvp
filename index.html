@@ -2237,6 +2237,22 @@ function getTimeContext() {
 
 const LS_HOME_AMBIENT = 'yeyu_home_ambient';
 const HOME_AMBIENT_VOL = 0.26;
+/** 用于取消渐入 rAF；pause / 非渐入 resume 时递增 */
+let homeAmbientFadeToken = 0;
+
+function runHomeAmbientFadeIn(a, targetVol, token) {
+  const t0 = performance.now();
+  const dur = 1100;
+  const ease = (t) => 1 - (1 - t) * (1 - t);
+  function tick(now) {
+    if (token !== homeAmbientFadeToken) return;
+    const p = Math.min(1, (now - t0) / dur);
+    a.volume = targetVol * ease(p);
+    if (p < 1) requestAnimationFrame(tick);
+    else a.volume = targetVol;
+  }
+  requestAnimationFrame(tick);
+}
 
 /** 未静音（默认）：localStorage 非 '0' 即视为开启；仅 '0' 表示用户主动静音 */
 function isHomeAmbientOn() {
@@ -2262,17 +2278,43 @@ function syncHomeAmbientButton() {
 
 function pauseHomeAmbient() {
   const a = getHomeAmbientAudio();
-  if (a && !a.paused) a.pause();
+  if (!a) return;
+  homeAmbientFadeToken++;
+  if (!a.paused) a.pause();
+  a.volume = HOME_AMBIENT_VOL;
 }
 
-function tryResumeHomeAmbient() {
-  if (!isHomeAmbientOn()) return;
+/**
+ * @param {{ fadeIn?: boolean }} [opts] fadeIn：进首页 / 首次手势兜底 / 用户点开时用渐入，更有仪式感
+ * @returns {Promise<void>}
+ */
+function tryResumeHomeAmbient(opts) {
+  const fadeIn = !!(opts && opts.fadeIn);
+  if (!isHomeAmbientOn()) return Promise.resolve();
   const home = document.getElementById('home');
-  if (!home || !home.classList.contains('active')) return;
+  if (!home || !home.classList.contains('active')) return Promise.resolve();
   const a = getHomeAmbientAudio();
-  if (!a) return;
-  a.volume = HOME_AMBIENT_VOL;
-  a.play().catch(() => {});
+  if (!a) return Promise.resolve();
+  const target = HOME_AMBIENT_VOL;
+
+  if (!a.paused && !a.ended) return Promise.resolve();
+
+  if (!fadeIn) {
+    homeAmbientFadeToken++;
+    a.volume = target;
+    return a.play().catch(() => {});
+  }
+
+  homeAmbientFadeToken++;
+  const token = homeAmbientFadeToken;
+  a.volume = 0;
+  return a.play().then(() => {
+    if (token !== homeAmbientFadeToken) return;
+    runHomeAmbientFadeIn(a, target, token);
+  }).catch(() => {
+    if (token === homeAmbientFadeToken) a.volume = target;
+    return Promise.reject(new Error('ambient_play_failed'));
+  });
 }
 
 function toggleHomeAmbient() {
@@ -2282,15 +2324,14 @@ function toggleHomeAmbient() {
   if (wasOn) {
     localStorage.setItem(LS_HOME_AMBIENT, '0');
     syncHomeAmbientButton();
-    a.pause();
+    pauseHomeAmbient();
     return;
   }
   localStorage.removeItem(LS_HOME_AMBIENT);
   syncHomeAmbientButton();
   const home = document.getElementById('home');
   if (!home || !home.classList.contains('active')) return;
-  a.volume = HOME_AMBIENT_VOL;
-  a.play().catch(() => {
+  tryResumeHomeAmbient({ fadeIn: true }).catch(() => {
     localStorage.setItem(LS_HOME_AMBIENT, '0');
     syncHomeAmbientButton();
   });
@@ -2301,7 +2342,11 @@ function bindHomeAmbientAutoplayUnlock() {
   if (!home || home.dataset.ambientUnlockBound === '1') return;
   if (!isHomeAmbientOn()) return;
   home.dataset.ambientUnlockBound = '1';
-  const once = () => { tryResumeHomeAmbient(); };
+  const once = () => {
+    const au = getHomeAmbientAudio();
+    if (au && !au.paused) return;
+    tryResumeHomeAmbient({ fadeIn: true });
+  };
   home.addEventListener('click', once, { once: true });
   home.addEventListener('touchend', once, { once: true });
 }
@@ -2316,6 +2361,7 @@ function initHomeAmbient() {
     btn.title = '氛围音（请将 home-ambient.mp3 放入 assets/）';
   });
   bindHomeAmbientAutoplayUnlock();
+  tryResumeHomeAmbient({ fadeIn: true });
 }
 
 function goHome() {
