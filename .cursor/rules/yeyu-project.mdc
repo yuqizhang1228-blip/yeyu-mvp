@@ -29,9 +29,16 @@ yeyu-mvp/
 ├── server.js           # 本地开发服务器
 ├── CONTEXT.md          # 项目深度上下文（历史/决策/待办）
 ├── PROMPT_HISTORY.md   # 提示词版本演进记录
+├── design-system/夜屿-night-isle/MASTER.md  # UI UX Pro Max 检索结论与实现映射（设计决策源）
 └── .cursor/rules/
     └── yeyu-project.mdc  # 本文件
 ```
+
+## UI / 视觉设计（UI UX Pro Max）
+- **[UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** 已装在 **Cursor 用户级**：`~/.cursor/skills/ui-ux-pro-max/`（所有仓库通用）。本仓库不再放副本。
+- **设计决策须完全基于该技能可追溯**：先 **Read** `SKILL.md`，用 `search.py` 拉取 `--domain product | style | ux | color | web` 及 `--stack html-tailwind`；**落地结论与冲突裁决**写入仓库 **`design-system/夜屿-night-isle/MASTER.md`**（含检索命令与 csv 域映射）。改 UI 时以 **MASTER** 为据，自动 `--design-system` 若与深色对话 H5 冲突，以 MASTER 第二节「裁决规则」为准。
+- 实现映射集中在 **`index.html`** 的 CSS 变量与语义 HTML；**勿默认引入** Tailwind 运行时或组件库。
+- 检索关键词建议包含：`mental health app`、`dark mode OLED calm`、`accessibility focus touch`，与产品「夜间、CBT、信任」一致即可。
 
 ## 关键代码位置（index.html）
 - CSS 变量 / 主题色：第 7-25 行（`--bg: #121620`，`--glow-primary: #FF9F68`）

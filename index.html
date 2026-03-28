@@ -4,32 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <title>夜屿 Night Isle — MVP Prototype</title>
+<!-- Figma MCP：本地页面捕获到设计稿时需加载（https://developers.figma.com/docs/figma-mcp-server/） -->
+<script src="https://mcp.figma.com/mcp/html-to-design/capture.js" async></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #121620;
-    --surface: #1E2330;
-    --surface2: rgba(255,255,255,0.05);
-    --border: rgba(255,255,255,0.08);
-    --text-primary: #E2E8F0;
-    --text-secondary: #94A3B8;
+    /* 基底略偏冷灰 OLED，衬液态玻璃更「干净」 */
+    --bg: #12141e;
+    --surface: rgba(30, 34, 46, 0.65);
+    --surface2: rgba(255, 255, 255, 0.06);
+    --border: rgba(255, 255, 255, 0.11);
+    --text-primary: #F1F5F9;
+    --text-secondary: #A1AEC0;
     --glow-primary: #FF9F68;
     --glow-secondary: #FF7E5F;
-    --indigo: #6366F1;
-    --radius-card: 24px;
-    --radius-bubble: 20px;
+    --indigo: #818CF8;
+    --radius-card: 22px;
+    --radius-bubble: 22px;
     --radius-pill: 999px;
+    --ring: rgba(255, 180, 140, 0.5);
+    --ring-offset: #12141e;
+    --text-subtle: rgba(168, 182, 200, 0.58);
+    /* 液态玻璃 token（近似 Apple 系磨砂材质：高光边 + 弱填充） */
+    --lg-blur: 40px;
+    --lg-blur-strong: 56px;
+    --lg-fill: rgba(255, 255, 255, 0.055);
+    --lg-fill-elevated: rgba(255, 255, 255, 0.09);
+    --lg-stroke: rgba(255, 255, 255, 0.14);
+    --lg-stroke-soft: rgba(255, 255, 255, 0.09);
+    --lg-specular: rgba(255, 255, 255, 0.22);
+    --lg-shadow: 0 24px 64px rgba(0, 0, 0, 0.45);
+  }
+
+  /* 键盘 Tab 时可见焦点；鼠标点击不强行套环（:focus-visible） */
+  :where(
+    button,
+    .back-btn,
+    .chip:not(.chip-skeleton),
+    .history-item,
+    .settings-item,
+    .card-item,
+    .card-summary-entry,
+    .collect-btn,
+    .card-toggle-btn,
+    .resolve-btn
+  ):focus {
+    outline: none;
+  }
+  :where(
+    button:not(.send-btn):not(.name-confirm-btn),
+    .back-btn,
+    .chip:not(.chip-skeleton),
+    .history-item,
+    .settings-item,
+    .card-item,
+    .card-summary-entry,
+    .collect-btn,
+    .card-toggle-btn,
+    .resolve-btn
+  ):focus-visible {
+    box-shadow: 0 0 0 2px var(--ring-offset), 0 0 0 4px var(--ring);
+  }
+  .send-btn:focus-visible,
+  .name-confirm-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--ring-offset), 0 0 0 4px var(--ring), 0 4px 20px rgba(255,159,104,0.35);
+  }
+  .input-box:focus,
+  .name-input:focus,
+  .memory-note-box:focus {
+    outline: none;
+  }
+  .input-box:focus-visible {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.06),
+      0 0 0 2px rgba(255, 159, 104, 0.28),
+      0 0 20px rgba(129, 140, 248, 0.08);
+    filter: brightness(1.01);
+  }
+  /* 玻璃环内 textarea：不用默认液态玻璃 focus 光晕，避免与环上光效叠两套 UI */
+  .input-glass-ring .input-box:focus-visible {
+    box-shadow: inset 0 0 0 1px rgba(255, 159, 104, 0.32);
+    filter: none;
+  }
+  .name-input:focus-visible {
+    border-color: rgba(255, 159, 104, 0.65);
+    box-shadow: 0 0 0 3px rgba(255, 159, 104, 0.12);
+  }
+  .memory-note-box:focus-visible {
+    border-color: rgba(255, 159, 104, 0.35);
+    box-shadow: 0 0 0 3px rgba(255, 159, 104, 0.1);
   }
 
   html, body {
     width: 100%; height: 100%;
     margin: 0; padding: 0;
-    background: #0a0c12;
-    font-family: 'PingFang SC', 'Noto Serif SC', sans-serif;
+    background-color: rgba(125, 125, 125, 1);
+    background-image: none;
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'PingFang SC', 'Noto Serif SC', system-ui, sans-serif;
     overflow: hidden;
+    touch-action: manipulation;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
   }
 
   /* Phone Shell → Full Screen */
@@ -40,6 +120,29 @@
     background: var(--bg);
     overflow: hidden;
     position: relative;
+    /* ux-guidelines：Pull to Refresh — 减少误触刷新 */
+    overscroll-behavior: contain;
+  }
+  /* Figma 捕获：固定逻辑尺寸 375×812（hash 含 figmacapture 时启用） */
+  html.figma-capture-frame {
+    background: #0a0c12;
+  }
+  html.figma-capture-frame body {
+    margin: 0;
+    min-height: 812px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background: #0a0c12;
+  }
+  html.figma-capture-frame .phone {
+    width: 375px !important;
+    height: 812px !important;
+    max-width: 375px !important;
+    max-height: 812px !important;
+    margin: 0 !important;
+    flex-shrink: 0;
+    box-sizing: border-box;
   }
   /* 让快捷卡片区域可以横滑，不被phone裁切 */
   #home {
@@ -47,43 +150,85 @@
     overflow-y: hidden;
   }
 
-  /* Screens */
+  /* Screens：离场淡出；入场由 JS 首帧关 transition 立即不透明，避免半透明时透出下层首页造成「缺一层」与顶栏磨砂错位 */
   .screen {
     position: absolute; inset: 0;
     display: flex; flex-direction: column;
     opacity: 0; pointer-events: none;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.32s ease;
     overflow-x: hidden;
+    z-index: 0;
   }
-  .screen.active { opacity: 1; pointer-events: all; }
+  .screen.active {
+    opacity: 1; pointer-events: all;
+    z-index: 2;
+  }
 
   /* Status bar - 完全隐藏 */
   .statusbar { display: none; }
 
   /* ===== HOME SCREEN ===== */
   #home {
-    background: radial-gradient(ellipse 90% 55% at 50% 8%, rgba(255, 159, 104, 0.07) 0%, transparent 62%), var(--bg);
+    background:
+      radial-gradient(ellipse 85% 55% at 50% -5%, rgba(120, 132, 255, 0.07) 0%, transparent 52%),
+      radial-gradient(ellipse 70% 45% at 50% 18%, rgba(255, 159, 104, 0.07) 0%, transparent 58%),
+      radial-gradient(ellipse 90% 70% at 100% 55%, rgba(99, 102, 241, 0.04) 0%, transparent 48%),
+      radial-gradient(ellipse 80% 50% at 0% 70%, rgba(255, 126, 95, 0.03) 0%, transparent 45%),
+      var(--bg);
+  }
+
+  /* 首页底区：与 #home 同一平面，不另铺磨砂底板（避免「多一层」层次） */
+  .home-composer {
+    flex-shrink: 0;
+    position: relative;
+    padding-top: 14px;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    margin-top: 0;
+    border: none;
+    border-image: none;
+    background: transparent;
+    box-shadow: none;
   }
 
   .home-header {
-    padding: 8px 24px 0;
+    padding: max(10px, env(safe-area-inset-top, 0px)) 24px 0;
     display: flex; align-items: center; justify-content: space-between;
   }
-  .home-date { font-size: 13px; color: var(--text-secondary); letter-spacing: 0.04em; }
+  .home-date {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.38);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
   /* 与左侧菜单按钮同宽，保持标题区视觉居中 */
   .home-header-spacer { width: 36px; height: 36px; flex-shrink: 0; }
   .icon-btn {
     width: 36px; height: 36px; border-radius: 50%;
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--lg-fill);
+    border: 1px solid var(--lg-stroke);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0;
     padding: 0; margin: 0; font: inherit; color: inherit;
     -webkit-appearance: none; appearance: none;
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
   }
-  .icon-btn svg { opacity: 0.6; }
+  .icon-btn svg { opacity: 0.72; }
+  .icon-btn:active {
+    background: var(--lg-fill-elevated);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: scale(0.94);
+  }
+  .icon-btn:active svg { opacity: 0.9; }
   /* 氛围音开启：仅外圈与抽屉默认 1px 边框区分；图标亮度/线粗与左侧抽屉一致（svg 共用 .icon-btn svg opacity） */
   .icon-btn--ambient-on {
-    border-color: rgba(255, 159, 104, 0.35);
+    border-color: rgba(255, 190, 160, 0.38);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 0 20px rgba(255, 159, 104, 0.08);
   }
   .home-ambient-icon-wrap {
     display: flex; align-items: center; justify-content: center;
@@ -107,29 +252,33 @@
     display: flex; gap: 10px; align-items: center;
   }
   .name-input {
-    background: var(--surface); border: 1px solid rgba(255,159,104,0.3);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--lg-stroke);
     border-radius: var(--radius-pill); padding: 12px 20px;
     font-size: 16px; color: var(--text-primary); outline: none;
     font-family: inherit; width: 180px; text-align: center;
     transition: border-color 0.2s, box-shadow 0.2s;
     letter-spacing: 0.02em;
+    backdrop-filter: blur(28px) saturate(1.65);
+    -webkit-backdrop-filter: blur(28px) saturate(1.65);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
-  .name-input::placeholder { color: rgba(148,163,184,0.4); font-size: 14px; }
-  .name-input:focus {
-    border-color: rgba(255,159,104,0.6);
-    box-shadow: 0 0 0 3px rgba(255,159,104,0.1);
-  }
+  .name-input::placeholder { color: var(--text-subtle); font-size: 14px; }
   .name-confirm-btn {
     width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
-    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 16px rgba(255,159,104,0.35);
+    background: linear-gradient(155deg, rgba(255, 200, 160, 0.95) 0%, var(--glow-primary) 45%, var(--glow-secondary) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(12px) saturate(1.35);
+    -webkit-backdrop-filter: blur(12px) saturate(1.35);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 6px 22px rgba(255, 130, 95, 0.3);
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
-  .name-confirm-btn:hover { transform: scale(1.05); box-shadow: 0 6px 20px rgba(255,159,104,0.5); }
-  .name-confirm-btn:active { transform: scale(0.95); }
-  .name-skip { font-size: 12px; color: rgba(148,163,184,0.35); cursor: pointer; transition: color 0.2s; }
-  .name-skip:hover { color: rgba(148,163,184,0.6); }
+  .name-confirm-btn:active { transform: scale(0.94); opacity: 0.92; }
+  .name-skip { font-size: 12px; color: rgba(148,163,184,0.35); cursor: pointer; transition: color 0.15s, opacity 0.15s; }
+  .name-skip:active { color: rgba(148,163,184,0.55); opacity: 0.85; }
 
   .orb-wrap {
     position: relative; width: 188px; height: 188px;
@@ -475,10 +624,48 @@
     .orb-flow-layer, .orb-flow, .orb, .orb-spark, .chat-orb-mini { transform: none !important; }
     .orb-meteor-line { opacity: 0 !important; filter: none !important; }
     .orb-spark { opacity: 0.38 !important; }
+    .chip-skeleton-line::after { animation: none !important; }
+    .msg, .thinking, .collect-btns, .action-card-wrap, .saved-bar {
+      animation: none !important;
+    }
+    .msg, .thinking, .collect-btns { opacity: 1 !important; transform: none !important; }
+    .input-box:focus-visible { filter: none !important; }
+    .input-glass-ring {
+      box-shadow: 0 3px 14px rgba(0, 0, 0, 0.45) !important;
+    }
+    .input-glass-ring::before {
+      animation: none !important;
+      will-change: auto;
+      opacity: 0.72 !important;
+      transform: none !important;
+    }
+    .icon-btn:active,
+    .btn-accept:active,
+    .btn-more:active,
+    .card-bar:active,
+    .list-card-item:active,
+    .list-history-item:active,
+    .send-btn:active,
+    .back-btn:active,
+    .collect-btn:active,
+    .quick-chips .chip:active,
+    .card-summary-entry:active,
+    .history-item:active,
+    .settings-item:active,
+    .card-item:active { transform: none !important; }
+    .card-bar-dot { animation: none !important; }
   }
 
-  .home-greeting { font-size: 15px; color: var(--text-secondary); text-align: center; line-height: 1.6; }
-  .home-greeting strong { color: var(--text-primary); font-weight: 500; display: block; font-size: 17px; margin-bottom: 4px; }
+  .home-greeting { font-size: 14px; color: var(--text-secondary); text-align: center; line-height: 1.7; font-weight: 400; }
+  .home-greeting strong {
+    color: #FFFFFF;
+    font-weight: 600;
+    display: block;
+    font-size: 20px;
+    margin-bottom: 8px;
+    letter-spacing: -0.02em;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, 0.08), 0 0 48px rgba(255, 159, 104, 0.12);
+  }
   #greetingSubtitle {
     display: inline-block;
     opacity: 0;
@@ -487,12 +674,14 @@
 
   /* Quick chips */
   .quick-chips {
-    display: flex; gap: 10px;
+    display: flex; gap: 12px;
     overflow-x: auto;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     touch-action: pan-x;
-    padding: 0 20px 16px;
+    padding: 24px 20px 24px;
+    /* 与底栏一体，不再单独铺一层「卡片背后」的磨砂感 */
+    background: transparent;
   }
   .quick-chips::-webkit-scrollbar { display: none; }
   /*
@@ -505,11 +694,24 @@
     height: calc(24px + 13px * 1.5 * 3);
     padding-block: 12px;
     padding-inline: 14px;
-    background: var(--surface); border: 1px solid var(--border);
+    border: 1px solid var(--lg-stroke-soft);
     border-radius: var(--radius-card); cursor: pointer;
     font-size: 13px; color: var(--text-secondary); line-height: 1.5;
-    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+    font-weight: 500;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
     box-sizing: border-box;
+    backdrop-filter: blur(20px) saturate(1.22);
+    -webkit-backdrop-filter: blur(20px) saturate(1.22);
+    background: linear-gradient(
+      168deg,
+      rgba(255, 255, 255, 0.09) 0%,
+      rgba(255, 255, 255, 0.03) 28%,
+      rgba(255, 255, 255, 0.045) 55%,
+      rgba(255, 255, 255, 0.028) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.11),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.12);
   }
   .quick-chips .chip:not(.chip-skeleton) {
     white-space: normal;
@@ -517,7 +719,20 @@
     word-break: normal;
     overflow: hidden;
   }
-  .quick-chips .chip:hover { border-color: rgba(255,159,104,0.3); color: var(--text-primary); background: rgba(255,159,104,0.05); }
+  .quick-chips .chip:active:not(.chip-skeleton) {
+    border-color: rgba(255, 200, 170, 0.26);
+    color: var(--text-primary);
+    background: linear-gradient(
+      168deg,
+      rgba(255, 255, 255, 0.11) 0%,
+      rgba(255, 255, 255, 0.045) 35%,
+      rgba(255, 255, 255, 0.06) 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.1),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    transform: scale(0.98);
+  }
 
   /* 快捷场景骨架：与文字卡片同高，内为三行占位条 */
   .chip.chip-skeleton {
@@ -564,33 +779,211 @@
 
   /* Input area */
   .input-wrap {
-    padding: 0 20px 16px;
-    display: flex; align-items: flex-end; gap: 10px;
+    padding: 0 20px 10px;
+    display: flex; justify-content: center; align-items: flex-start; gap: 12px;
   }
+  .home-composer .input-wrap {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  /*
+   * 首页输入为何多一层 div + textarea：
+   * - 首页与聊天底栏均用 .input-glass-ring + 内层 textarea：整圈 conic 渐变 + 缓转流动；单层 textarea 无法同时保留渐变描边与整圈动画。
+   * - 因此外壳 .input-glass-ring 用 padding 留出约 1px 缝，::before 铺渐变，内层 textarea 纯色盖住中间，视觉上只剩一环。
+   * - 发糊感常来自：细环 + 圆角抗锯齿；光效为 ::before 绕中心慢转，亮段沿圆角环带移动，环厚仍为 1px。
+   */
+  @keyframes yeyu-input-ring-flow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  /* 与 padding 同宽的静态浅灰环（打底）；流动 conic 叠在上层，环厚仍为 1px */
+  .input-glass-ring::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-radius: 26px;
+    clip-path: inset(0 round 26px);
+    box-sizing: border-box;
+    padding: 1px;
+    background: rgba(255, 255, 255, 0.11);
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    mask-composite: exclude;
+  }
+  .input-glass-ring {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-flow: row;
+    justify-content: center;
+    align-items: stretch;
+    margin-top: 0;
+    margin-bottom: 0;
+    position: relative;
+    border-radius: 26px;
+    padding: 1px;
+    min-height: 54px;
+    overflow: hidden;
+    box-sizing: border-box;
+    isolation: isolate;
+    transform: translateZ(0);
+    /* 与内层 textarea 同色：::before 转圈时环缝下仍是稳定深色 */
+    background: rgba(10, 12, 18, 0.94);
+    /* 仅深度阴影，无描边 spread，避免与环带二次轮廓 */
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.45);
+  }
+  .input-glass-ring::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: 26px;
+    /* 与父级圆角双保险，避免首帧合成未套圆角时 conic 呈「三角扇形」穿帮 */
+    clip-path: inset(0 round 26px);
+    pointer-events: none;
+    transform-origin: 50% 50%;
+    /* 略透明，让 ::after 浅灰环始终作为同一细度下的底色透出 */
+    opacity: 0.76;
+    /* 色停收紧；整层缓转使高光沿圆角环带缓慢流动（环宽仍由父级 padding:1px 决定） */
+    background: conic-gradient(
+      from 198deg,
+      #4b4e62 0deg,
+      #4b4e62 58deg,
+      #e07852 84deg,
+      #f0b89a 96deg,
+      #8b92d4 108deg,
+      #d96552 122deg,
+      #4b4e62 148deg,
+      #4b4e62 360deg
+    );
+    animation: yeyu-input-ring-flow 22s linear infinite;
+  }
+  .input-glass-ring .input-box {
+    position: relative;
+    z-index: 2;
+    flex: 1;
+    align-self: stretch;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    padding: 12.5px 18px;
+    min-height: 48px;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 24px;
+    /* 纯色底：不占聊天框的液态玻璃 / 渐变描边语言 */
+    background: rgba(10, 12, 18, 0.94);
+    background-clip: border-box;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    box-shadow: none;
+    transition: color 0.2s ease, background-color 0.2s ease;
+  }
+
+  /*
+   * 输入框默认：液态玻璃 + 渐变描边。置于 .input-glass-ring 内时由环承担描边，内层见 .input-glass-ring .input-box。
+   */
   .input-box {
-    flex: 1; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 22px;
+    flex: 1;
+    min-width: 0;
+    border: 1.5px solid transparent;
+    border-radius: 24px;
     padding: 14px 18px; font-size: 15px;
     color: var(--text-primary); outline: none;
     font-family: inherit; resize: none;
     min-height: 50px; max-height: 120px;
-    line-height: 1.5; transition: border-color 0.2s;
+    line-height: 1.5;
+    transition: box-shadow 0.25s ease, filter 0.2s ease;
+    backdrop-filter: blur(26px) saturate(1.18);
+    -webkit-backdrop-filter: blur(26px) saturate(1.18);
+    background:
+      linear-gradient(
+        168deg,
+        rgba(255, 255, 255, 0.1) 0%,
+        rgba(255, 255, 255, 0.035) 18%,
+        rgba(18, 20, 30, 0.62) 42%,
+        rgba(12, 14, 22, 0.78) 100%
+      ) padding-box,
+      linear-gradient(
+        118deg,
+        rgba(255, 159, 104, 0.38) 0%,
+        rgba(129, 140, 248, 0.3) 42%,
+        rgba(255, 126, 95, 0.36) 100%
+      ) border-box;
+    background-origin: border-box;
+    background-clip: padding-box, border-box;
+    background-size: 100% 100%, 100% 100%;
+    background-position: 0 0, 0 0;
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.09),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.15),
+      0 0 0 1px rgba(0, 0, 0, 0.32);
   }
-  .input-box::placeholder { color: var(--text-secondary); }
-  .input-box:focus { border-color: rgba(255,159,104,0.4); }
+  .input-box::placeholder { color: var(--text-subtle); }
+
   .send-btn {
-    width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
-    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
-    border: none; cursor: pointer; display: flex; align-items: center; justify-content: center;
-    box-shadow: 0 4px 20px rgba(255,159,104,0.4);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(155deg, rgba(255, 210, 175, 0.95) 0%, rgba(255, 159, 104, 0.92) 42%, rgba(255, 118, 88, 0.9) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.38);
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.45),
+      inset 0 -1px 0 rgba(0, 0, 0, 0.12),
+      0 10px 32px rgba(255, 120, 90, 0.28),
+      0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
   }
-  .send-btn:hover { transform: scale(1.05); box-shadow: 0 6px 24px rgba(255,159,104,0.5); }
-  .send-btn:active { transform: scale(0.95); }
+  .send-btn:active {
+    transform: scale(0.94);
+    opacity: 0.95;
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.15),
+      0 6px 20px rgba(255, 120, 90, 0.22);
+  }
+  /* 首页底栏：发送钮略压亮度，避免与输入区一起「抢 orb」 */
+  .home-composer .send-btn {
+    background: linear-gradient(
+      155deg,
+      rgba(255, 175, 135, 0.78) 0%,
+      rgba(255, 138, 92, 0.72) 42%,
+      rgba(220, 88, 72, 0.76) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 6px 22px rgba(255, 100, 75, 0.16),
+      0 2px 8px rgba(0, 0, 0, 0.22);
+  }
+  .home-composer .send-btn:active {
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.18),
+      0 4px 16px rgba(255, 95, 70, 0.14);
+  }
 
   .disclaimer {
-    text-align: center; font-size: 11px; color: rgba(148,163,184,0.4);
-    padding: 0 28px 32px; line-height: 1.5;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.32);
+    padding: 4px 28px calc(22px + env(safe-area-inset-bottom, 0px));
+    line-height: 1.55;
+  }
+  .home-composer .disclaimer {
+    padding-top: 0;
+    padding-bottom: 18px;
   }
 
   /* ===== DRAWER ===== */
@@ -600,23 +993,28 @@
     transition: background 0.35s ease;
   }
   .drawer-overlay.open {
-    background: rgba(0,0,0,0.55); pointer-events: all;
-    backdrop-filter: blur(2px);
+    background: rgba(4, 6, 12, 0.52); pointer-events: all;
+    backdrop-filter: blur(24px) saturate(0.92);
+    -webkit-backdrop-filter: blur(24px) saturate(0.92);
   }
   .drawer {
     position: absolute; top: 0; left: 0; bottom: 0;
     width: 300px; z-index: 51;
-    background: #161B28;
-    border-right: 1px solid var(--border);
+    background: rgba(18, 20, 30, 0.55);
+    border-right: 1px solid var(--lg-stroke-soft);
     display: flex; flex-direction: column;
     transform: translateX(-100%);
-    transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-    box-shadow: 8px 0 40px rgba(0,0,0,0.5);
+    transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    backdrop-filter: blur(var(--lg-blur-strong)) saturate(1.65);
+    -webkit-backdrop-filter: blur(var(--lg-blur-strong)) saturate(1.65);
+    box-shadow:
+      inset -1px 0 0 rgba(255, 255, 255, 0.06),
+      16px 0 64px rgba(0, 0, 0, 0.4);
   }
   .drawer.open { transform: translateX(0); }
 
   .drawer-header {
-    padding: 56px 24px 20px;
+    padding: calc(48px + env(safe-area-inset-top, 0px)) 24px 20px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
@@ -644,7 +1042,7 @@
     transition: background 0.15s ease;
     border-radius: 0;
   }
-  .history-item:hover { background: rgba(255,255,255,0.04); }
+  .history-item:active { background: rgba(255,255,255,0.06); }
   .history-item-title {
     font-size: 13px; color: var(--text-primary);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -662,30 +1060,43 @@
   /* 行动卡片汇总入口 */
   .card-summary-entry {
     margin: 4px 16px 16px; padding: 14px 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--lg-stroke);
+    border-radius: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: space-between;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    backdrop-filter: blur(28px) saturate(1.65);
+    -webkit-backdrop-filter: blur(28px) saturate(1.65);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
-  .card-summary-entry:hover { border-color: rgba(255,159,104,0.3); }
+  .card-summary-entry:active {
+    border-color: rgba(255, 200, 170, 0.26);
+    background: rgba(255, 255, 255, 0.07);
+    transform: scale(0.99);
+  }
   .card-summary-left { display: flex; align-items: center; gap: 12px; }
   .card-summary-icon {
     width: 34px; height: 34px; border-radius: 10px;
     background: rgba(255,159,104,0.08); border: 1px solid rgba(255,159,104,0.2);
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; color: var(--glow-primary); flex-shrink: 0;
+    color: var(--glow-primary); flex-shrink: 0;
   }
+  .card-summary-icon svg { display: block; }
   .card-summary-main { font-size: 15px; color: var(--text-primary); font-weight: 500; }
   .card-summary-sub { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
   /* Action card items */
   .card-item {
     margin: 4px 16px; padding: 14px 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; cursor: pointer;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid var(--lg-stroke);
+    border-radius: 18px; cursor: pointer;
     transition: all 0.25s ease;
+    backdrop-filter: blur(24px) saturate(1.55);
+    -webkit-backdrop-filter: blur(24px) saturate(1.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  .card-item:hover { border-color: rgba(255,159,104,0.25); background: rgba(255,159,104,0.04); }
+  .card-item:active { border-color: rgba(255,159,104,0.22); background: rgba(255,159,104,0.05); }
   .card-item.expanded { border-color: rgba(255,159,104,0.3); background: rgba(255,159,104,0.04); }
   .card-item-action {
     font-size: 13px; color: var(--text-primary); line-height: 1.5;
@@ -750,42 +1161,66 @@
     display: flex; align-items: center; gap: 14px;
     transition: background 0.15s ease;
   }
-  .settings-item:hover { background: rgba(255,255,255,0.04); }
+  .settings-item:active { background: rgba(255,255,255,0.06); }
   .settings-icon {
-    width: 30px; height: 30px; border-radius: 8px;
-    background: var(--surface); border: 1px solid var(--border);
+    width: 30px; height: 30px; border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--lg-stroke-soft);
     display: flex; align-items: center; justify-content: center;
     flex-shrink: 0;
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .settings-label { font-size: 14px; color: var(--text-primary); flex: 1; }
   .settings-value { font-size: 12px; color: var(--text-secondary); }
   .settings-arrow { opacity: 0.3; }
 
   .drawer-footer {
-    padding: 16px 24px 36px;
+    padding: 16px 24px calc(36px + env(safe-area-inset-bottom, 0px));
     border-top: 1px solid var(--border); flex-shrink: 0;
   }
   .drawer-version { font-size: 11px; color: rgba(148,163,184,0.3); text-align: center; }
 
   /* ===== CHAT SCREEN ===== */
   #chat {
-    background: radial-gradient(ellipse 50% 30% at 50% 0%, rgba(99,102,241,0.1) 0%, transparent 60%), var(--bg);
+    background:
+      radial-gradient(ellipse 75% 50% at 50% -8%, rgba(120, 132, 255, 0.08) 0%, transparent 55%),
+      radial-gradient(ellipse 65% 40% at 50% 8%, rgba(99, 102, 241, 0.1) 0%, transparent 55%),
+      radial-gradient(ellipse 90% 45% at 100% 35%, rgba(255, 159, 104, 0.04) 0%, transparent 50%),
+      var(--bg);
   }
 
   .chat-header {
-    padding: 8px 20px 12px;
+    padding: max(10px, env(safe-area-inset-top, 0px)) 20px 14px;
     display: flex; align-items: center; gap: 12px;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid var(--lg-stroke-soft);
     flex-shrink: 0;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, rgba(14, 16, 26, 0.25) 100%);
+    backdrop-filter: blur(var(--lg-blur)) saturate(1.7);
+    -webkit-backdrop-filter: blur(var(--lg-blur)) saturate(1.7);
+    box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.2), 0 12px 40px rgba(0, 0, 0, 0.15);
   }
   .chat-header-titles { flex: 1; min-width: 0; }
   .back-btn {
     width: 36px; height: 36px; border-radius: 50%;
-    background: var(--surface2); border: 1px solid var(--border);
+    background: var(--lg-fill);
+    border: 1px solid var(--lg-stroke);
     display: flex; align-items: center; justify-content: center;
     cursor: pointer; flex-shrink: 0;
+    padding: 0; margin: 0; font: inherit; color: inherit;
+    -webkit-appearance: none; appearance: none;
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transition: border-color 0.2s ease, background 0.2s ease, transform 0.15s ease;
   }
-  /* 与首页主形象同源：assets/orb-hero.png */
+  .back-btn:active {
+    background: var(--lg-fill-elevated);
+    border-color: rgba(255, 255, 255, 0.18);
+    transform: scale(0.94);
+  }
+  /* 与首页 .orb 同源 assets/orb-hero.png + 漂移节奏，缩放到顶栏 */
   .chat-orb-mini {
     width: 32px;
     height: 32px;
@@ -796,9 +1231,10 @@
     background: transparent;
     border-radius: 0;
     overflow: visible;
-    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.38))
-      drop-shadow(0 0 8px rgba(255, 159, 104, 0.14));
-    animation: orb-mini-breathe 6.5s ease-in-out infinite;
+    animation: orb-drift 7.5s ease-in-out infinite;
+    filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.48))
+      drop-shadow(0 0 10px rgba(255, 159, 104, 0.14))
+      drop-shadow(0 0 18px rgba(255, 126, 95, 0.06));
   }
   .chat-orb-mini-img {
     width: 100%;
@@ -810,16 +1246,23 @@
     user-select: none;
     -webkit-user-drag: none;
   }
-  @keyframes orb-mini-breathe {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.06); }
+  .chat-orb-mini[data-time-period="深夜"] {
+    filter: saturate(0.94) brightness(0.96) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.48))
+      drop-shadow(0 0 10px rgba(255, 159, 104, 0.11))
+      drop-shadow(0 0 18px rgba(255, 126, 95, 0.05));
   }
-  .chat-title { font-size: 15px; color: var(--text-primary); font-weight: 500; }
-  .chat-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 1px; }
+  .chat-orb-mini[data-time-period="清晨"],
+  .chat-orb-mini[data-time-period="上午"] {
+    filter: saturate(1.04) brightness(1.02) drop-shadow(0 6px 12px rgba(0, 0, 0, 0.48))
+      drop-shadow(0 0 10px rgba(255, 159, 104, 0.19))
+      drop-shadow(0 0 18px rgba(255, 126, 95, 0.09));
+  }
+  .chat-title { font-size: 16px; color: var(--text-primary); font-weight: 600; letter-spacing: -0.03em; }
+  .chat-subtitle { font-size: 12px; color: rgba(255, 255, 255, 0.42); margin-top: 2px; font-weight: 500; letter-spacing: 0.02em; }
 
   /* Messages */
   .messages {
-    flex: 1; overflow-y: auto; padding: 20px 20px 12px;
+    flex: 1; min-height: 0; overflow-y: auto; padding: 20px 20px 12px;
     display: flex; flex-direction: column; gap: 16px;
     scrollbar-width: none;
   }
@@ -851,20 +1294,29 @@
   /* 用户：扁平冷灰块，无暖色、弱阴影 —— 明确是「我发出的短条」 */
   .msg.user .bubble {
     line-height: 1.62;
-    color: #F1F5F9;
-    background: rgba(36, 41, 54, 0.78);
-    border: 1px solid rgba(71, 85, 105, 0.36);
-    border-bottom-right-radius: 6px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.032);
+    color: #FAFBFC;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid var(--lg-stroke);
+    border-bottom-right-radius: 8px;
+    backdrop-filter: blur(24px) saturate(1.5);
+    -webkit-backdrop-filter: blur(24px) saturate(1.5);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.12),
+      0 6px 20px rgba(0, 0, 0, 0.18);
   }
-  /* AI：与用户同一套「实心块 + 细边 + 一角小圆角」，仅色相偏暖以区分，无渐变、无磨砂 */
+  /* AI：液态玻璃 + 极淡暖色折射，与用户冷玻璃区分 */
   .msg.ai .bubble {
     line-height: 1.62;
-    color: #F1F5F9;
-    background: rgba(46, 38, 36, 0.78);
-    border: 1px solid rgba(120, 88, 76, 0.34);
-    border-bottom-left-radius: 6px;
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.032);
+    color: #FFF9F5;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 140, 100, 0.09) 100%);
+    border: 1px solid rgba(255, 190, 160, 0.22);
+    border-bottom-left-radius: 8px;
+    backdrop-filter: blur(28px) saturate(1.65);
+    -webkit-backdrop-filter: blur(28px) saturate(1.65);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 6px 24px rgba(0, 0, 0, 0.2),
+      0 0 40px rgba(255, 159, 104, 0.05);
   }
   .msg-time { font-size: 11px; color: rgba(148,163,184,0.4); margin-top: 4px; padding: 0 4px; }
   .msg.user .msg-time,
@@ -911,11 +1363,22 @@
   }
   .collect-btn {
     padding: 9px 16px; border-radius: var(--radius-pill);
-    background: var(--surface); border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--lg-stroke);
     font-size: 13px; color: var(--text-secondary); cursor: pointer;
-    transition: all 0.2s ease;
+    font-weight: 500;
+    transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  .collect-btn:hover { border-color: rgba(255,159,104,0.5); color: var(--glow-primary); background: rgba(255,159,104,0.05); }
+  .collect-btn:active {
+    border-color: rgba(255, 180, 150, 0.3);
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.08);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    transform: scale(0.98);
+  }
 
   /* Action Card */
   .action-card-wrap {
@@ -926,14 +1389,22 @@
     to { opacity: 1; transform: translateY(0); }
   }
   .action-card {
-    background: var(--surface); border: 1px solid rgba(255,159,104,0.2);
-    border-radius: var(--radius-card); padding: 20px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,159,104,0.05);
+    background: rgba(255, 255, 255, 0.055);
+    border: 1px solid rgba(255, 200, 170, 0.2);
+    border-radius: var(--radius-card); padding: 22px;
+    backdrop-filter: blur(36px) saturate(1.75);
+    -webkit-backdrop-filter: blur(36px) saturate(1.75);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      0 20px 50px rgba(0, 0, 0, 0.35),
+      0 0 0 1px rgba(255, 159, 104, 0.06);
   }
   .action-card-label {
+    display: flex; align-items: center; gap: 6px;
     font-size: 11px; color: var(--glow-primary); letter-spacing: 0.1em;
     text-transform: uppercase; margin-bottom: 14px; font-weight: 600;
   }
+  .action-card-label-icon { flex-shrink: 0; opacity: 0.95; }
   /* 区块小标签 */
   .card-section-label {
     font-size: 11px; color: rgba(148,163,184,0.45);
@@ -964,31 +1435,62 @@
   .action-card-btns { display: flex; gap: 10px; margin-top: 16px; }
   .btn-accept {
     flex: 1; padding: 12px; border-radius: var(--radius-pill);
-    background: linear-gradient(135deg, var(--glow-primary), var(--glow-secondary));
-    border: none; color: #fff; font-size: 14px; font-weight: 600;
+    background: linear-gradient(155deg, rgba(255, 200, 160, 0.95) 0%, var(--glow-primary) 42%, var(--glow-secondary) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #fff; font-size: 14px; font-weight: 600;
     cursor: pointer; font-family: inherit;
-    box-shadow: 0 4px 16px rgba(255,159,104,0.3);
+    letter-spacing: 0.02em;
+    backdrop-filter: blur(14px) saturate(1.4);
+    -webkit-backdrop-filter: blur(14px) saturate(1.4);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.4),
+      0 8px 28px rgba(255, 120, 90, 0.28);
     transition: all 0.2s ease;
   }
-  .btn-accept:hover { box-shadow: 0 6px 20px rgba(255,159,104,0.5); transform: translateY(-1px); }
+  .btn-accept:active {
+    opacity: 0.92;
+    transform: scale(0.98);
+    box-shadow:
+      inset 0 2px 8px rgba(0, 0, 0, 0.12),
+      0 4px 16px rgba(255, 120, 90, 0.22);
+  }
   .btn-more {
     flex: 1; padding: 12px; border-radius: var(--radius-pill);
-    background: var(--surface2); border: 1px solid var(--border);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--lg-stroke);
     color: var(--text-secondary); font-size: 14px; cursor: pointer; font-family: inherit;
+    font-weight: 500;
     transition: all 0.2s ease;
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  .btn-more:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+  .btn-more:active {
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.07);
+    transform: scale(0.98);
+  }
 
   /* Collapsed card bar */
   .card-bar {
-    margin: 0 20px 8px; padding: 11px 16px;
-    background: rgba(255,159,104,0.07); border: 1px solid rgba(255,159,104,0.2);
-    border-radius: 14px; display: none;
+    margin: 0 20px 8px; padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 190, 160, 0.22);
+    border-radius: 18px; display: none;
     align-items: center; justify-content: space-between;
-    cursor: pointer; transition: all 0.2s ease;
+    cursor: pointer; transition: all 0.22s ease;
     animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1);
+    backdrop-filter: blur(28px) saturate(1.7);
+    -webkit-backdrop-filter: blur(28px) saturate(1.7);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
   }
-  .card-bar:hover { background: rgba(255,159,104,0.12); border-color: rgba(255,159,104,0.35); }
+  .card-bar:active {
+    background: rgba(255, 255, 255, 0.07);
+    border-color: rgba(255, 200, 170, 0.3);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    transform: scale(0.99);
+  }
   .card-bar.show { display: flex; }
   .card-bar-left { display: flex; align-items: center; gap: 8px; }
   .card-bar-dot {
@@ -997,7 +1499,7 @@
     box-shadow: 0 0 6px rgba(255,159,104,0.6);
     animation: pulse 2s ease-in-out infinite;
   }
-  .card-bar-text { font-size: 13px; color: var(--glow-primary); }
+  .card-bar-text { font-size: 13px; font-weight: 500; color: rgba(255, 210, 185, 0.95); letter-spacing: 0.01em; }
   .card-bar-chevron {
     transition: transform 0.25s ease; opacity: 0.6;
   }
@@ -1006,19 +1508,51 @@
   /* Saved bar */
   .saved-bar {
     margin: 0 20px 8px; padding: 12px 16px;
-    background: rgba(255,159,104,0.1); border: 1px solid rgba(255,159,104,0.2);
-    border-radius: 14px; align-items: center; gap: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 190, 160, 0.2);
+    border-radius: 18px; align-items: center; gap: 10px;
     animation: slideUp 0.3s ease; display: none;
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
   }
   .saved-bar.show { display: flex; }
   .saved-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--glow-primary); flex-shrink: 0; }
   .saved-text { font-size: 13px; color: var(--text-secondary); }
   .saved-text strong { color: var(--glow-primary); }
 
-  /* Chat input */
+  /* Chat input：与首页 .home-composer 输入行同一套（透明底栏 + 呼吸环 + 略压暗发送钮） */
   .chat-input-wrap {
-    padding: 8px 20px 28px; flex-shrink: 0;
-    display: flex; align-items: flex-end; gap: 10px;
+    padding: 8px 20px calc(8px + env(safe-area-inset-bottom, 0px));
+    flex-shrink: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 12px;
+    border: none;
+    border-image: none;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+  .chat-input-wrap .send-btn {
+    background: linear-gradient(
+      155deg,
+      rgba(255, 175, 135, 0.78) 0%,
+      rgba(255, 138, 92, 0.72) 42%,
+      rgba(220, 88, 72, 0.76) 100%
+    );
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.28),
+      0 6px 22px rgba(255, 100, 75, 0.16),
+      0 2px 8px rgba(0, 0, 0, 0.22);
+  }
+  .chat-input-wrap .send-btn:active {
+    box-shadow:
+      inset 0 2px 6px rgba(0, 0, 0, 0.18),
+      0 4px 16px rgba(255, 95, 70, 0.14);
   }
 
   /* Resolve buttons */
@@ -1059,17 +1593,16 @@
 
   .settings-page-header {
     display: flex; align-items: center; gap: 12px;
-    padding: 8px 20px 12px;
+    padding: max(10px, env(safe-area-inset-top, 0px)) 20px 12px;
     border-bottom: 1px solid var(--border);
     flex-shrink: 0;
-    padding-top: 8px;
   }
   .settings-page-title {
     font-size: 16px; font-weight: 500; color: var(--text-primary);
   }
 
   .settings-page-body {
-    flex: 1; overflow-y: auto; padding: 24px 20px 40px;
+    flex: 1; overflow-y: auto; padding: 24px 20px calc(40px + env(safe-area-inset-bottom, 0px));
     scrollbar-width: none;
   }
   .settings-page-body::-webkit-scrollbar { display: none; }
@@ -1105,9 +1638,12 @@
   }
 
   .settings-block {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid var(--lg-stroke);
+    border-radius: 16px; overflow: hidden;
+    backdrop-filter: blur(28px) saturate(1.6);
+    -webkit-backdrop-filter: blur(28px) saturate(1.6);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
   .settings-row {
     display: flex; align-items: center; gap: 12px;
@@ -1191,14 +1727,14 @@
     margin: 4px 20px 16px; padding: 10px;
     border: 1px dashed rgba(148,163,184,0.15); border-radius: 12px;
     font-size: 13px; color: rgba(148,163,184,0.5);
-    cursor: pointer; transition: all 0.2s ease;
+    cursor: pointer; transition: border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
   }
-  .drawer-view-all:hover { border-color: rgba(255,159,104,0.3); color: var(--glow-primary); }
+  .drawer-view-all:active { border-color: rgba(255,159,104,0.28); color: var(--glow-primary); background: rgba(255,255,255,0.03); }
 
   /* List page */
   .list-page-header {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 12px 16px 8px; flex-shrink: 0;
+    padding: max(12px, env(safe-area-inset-top, 0px)) 16px 8px; flex-shrink: 0;
   }
   .list-page-title { font-size: 16px; color: var(--text-primary); font-weight: 500; }
 
@@ -1219,7 +1755,7 @@
 
   /* List body */
   .list-body {
-    flex: 1; overflow-y: auto; padding: 0 20px 28px;
+    flex: 1; overflow-y: auto; padding: 0 20px calc(28px + env(safe-area-inset-bottom, 0px));
   }
   .list-month-label {
     font-size: 11px; color: rgba(148,163,184,0.4);
@@ -1228,11 +1764,15 @@
 
   /* Full card item */
   .list-card-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 16px; margin-bottom: 10px;
-    cursor: pointer; transition: border-color 0.2s ease;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid var(--lg-stroke);
+    border-radius: 18px; padding: 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    backdrop-filter: blur(24px) saturate(1.55);
+    -webkit-backdrop-filter: blur(24px) saturate(1.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  .list-card-item:hover { border-color: rgba(255,159,104,0.25); }
+  .list-card-item:active { border-color: rgba(255,159,104,0.22); transform: scale(0.99); }
   .list-card-thought {
     font-size: 12px; color: rgba(148,163,184,0.5); margin-bottom: 6px;
   }
@@ -1251,11 +1791,15 @@
 
   /* Full history item */
   .list-history-item {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 16px; padding: 16px; margin-bottom: 10px;
-    cursor: pointer; transition: border-color 0.2s ease;
+    background: rgba(255, 255, 255, 0.045);
+    border: 1px solid var(--lg-stroke);
+    border-radius: 18px; padding: 16px; margin-bottom: 10px;
+    cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    backdrop-filter: blur(24px) saturate(1.55);
+    -webkit-backdrop-filter: blur(24px) saturate(1.55);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
-  .list-history-item:hover { border-color: rgba(255,159,104,0.25); }
+  .list-history-item:active { border-color: rgba(255,159,104,0.22); transform: scale(0.99); }
   .list-history-title {
     font-size: 14px; color: var(--text-primary); line-height: 1.55; margin-bottom: 8px;
   }
@@ -1294,6 +1838,11 @@
 </style>
 </head>
 <body>
+<script>
+(function () {
+  if (/\bfigmacapture=/.test(location.hash)) document.documentElement.classList.add('figma-capture-frame');
+})();
+</script>
 
 <div class="phone">
 
@@ -1312,12 +1861,12 @@
     </div>
 
     <div class="home-header">
-      <div class="icon-btn" onclick="openDrawer()">
-        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#E2E8F0" stroke-width="1.8" stroke-linecap="round">
+      <button type="button" class="icon-btn" onclick="openDrawer()" aria-label="打开菜单">
+        <svg width="16" height="12" viewBox="0 0 16 12" fill="none" stroke="#E2E8F0" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
           <line x1="0" y1="1" x2="16" y2="1"/><line x1="0" y1="6" x2="12" y2="6"/><line x1="0" y1="11" x2="16" y2="11"/>
         </svg>
-      </div>
-      <div class="home-date">2026年3月4日，星期三</div>
+      </button>
+      <div class="home-date" id="homeDate" aria-live="polite"></div>
       <button type="button" class="icon-btn icon-btn--ambient-on" id="homeAmbientBtn" aria-pressed="true" title="点击静音"
         onclick="toggleHomeAmbient()">
         <span class="home-ambient-icon-wrap" id="homeAmbientIconOn" aria-hidden="true">
@@ -1396,8 +1945,8 @@
           <input class="name-input" id="nameInput" type="text" placeholder="你的名字"
             maxlength="10"
             onkeydown="if(event.key==='Enter') confirmName()" />
-          <button class="name-confirm-btn" onclick="confirmName()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          <button type="button" class="name-confirm-btn" onclick="confirmName()" aria-label="确认名字">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
         </div>
         <div class="name-skip" onclick="confirmName('跳过')">跳过</div>
@@ -1410,24 +1959,28 @@
       </div>
     </div>
 
-    <!-- Quick Chips -->
-    <div class="quick-chips" id="quick-chips-wrap" style="display:none">
-      <!-- AI 动态生成 -->
-    </div>
+    <div class="home-composer">
+      <!-- Quick Chips -->
+      <div class="quick-chips" id="quick-chips-wrap" style="display:none">
+        <!-- AI 动态生成 -->
+      </div>
 
-    <!-- Input -->
-    <div class="input-wrap" id="home-input-wrap" style="display:none">
-      <textarea class="input-box" id="homeInput" placeholder="此刻想和我聊点什么…" rows="1"
-        onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFromHome()}"
-        oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-      <button class="send-btn" onclick="sendFromHome()">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
-          <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
-        </svg>
-      </button>
-    </div>
+      <!-- Input：外层 div 承载呼吸渐变环（::before），内层为真实输入框；单层 textarea 无法同时保留聊天框样式与整圈动画环 -->
+      <div class="input-wrap" id="home-input-wrap" style="display:none">
+        <div class="input-glass-ring">
+        <textarea class="input-box" id="homeInput" placeholder="此刻想和我聊点什么…" rows="1"
+          onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendFromHome()}"
+          oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
+        </div>
+        <button type="button" class="send-btn" onclick="sendFromHome()" aria-label="发送">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
+            <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
 
-    <div class="disclaimer">本功能无法代替专业心理咨询或医学治疗</div>
+      <div class="disclaimer">本功能无法代替专业心理咨询或医学治疗</div>
+    </div>
   </div>
 
   <!-- CHAT SCREEN -->
@@ -1438,9 +1991,9 @@
     </div>
 
     <div class="chat-header">
-      <div class="back-btn" onclick="goHome()">
+      <button type="button" class="back-btn" onclick="goHome()" aria-label="返回首页">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
+      </button>
       <div class="chat-orb-mini" id="chatOrb" role="img" aria-label="夜屿形象">
         <img class="chat-orb-mini-img" src="assets/orb-hero.png" alt="" width="32" height="32" decoding="async" />
       </div>
@@ -1448,14 +2001,14 @@
         <div class="chat-title">夜屿</div>
         <div class="chat-subtitle" id="chatStatus">正在陪伴</div>
       </div>
-      <div class="icon-btn" onclick="newChat()" title="新建对话" id="newChatBtn">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <button type="button" class="icon-btn" onclick="newChat()" title="新建对话" aria-label="新建对话" id="newChatBtn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
-      </div>
+      </button>
     </div>
 
-    <div class="messages" id="messages"></div>
+    <div class="messages" id="messages" role="log" aria-live="polite" aria-relevant="additions" aria-label="对话内容"></div>
 
     <!-- 折叠卡片条：吸附在输入框上方，不阻断对话 -->
     <div class="card-bar" id="cardBar" onclick="toggleCardExpand()">
@@ -1469,7 +2022,12 @@
     <!-- 展开的完整卡片 -->
     <div class="action-card-wrap" id="actionCardWrap" style="display:none">
       <div class="action-card">
-        <div class="action-card-label">✦ 行动卡片</div>
+        <div class="action-card-label">
+          <svg class="action-card-label-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 2l1.2 4.5L18 8l-4.8 1.5L12 14l-1.2-4.5L6 8l4.8-1.5L12 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+          </svg>
+          <span>行动卡片</span>
+        </div>
 
         <div class="card-section-label">你脑子里的那句话</div>
         <div class="action-card-thought">「被否的是我这个人，不只是方案」</div>
@@ -1493,10 +2051,12 @@
     <div class="resolve-row" id="resolveRow" style="display:none"></div>
 
     <div class="chat-input-wrap" id="chatInputWrap">
+      <div class="input-glass-ring">
       <textarea class="input-box" id="chatInput" placeholder="说点什么…" rows="1"
         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg()}"
         oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'"></textarea>
-      <button class="send-btn" onclick="sendMsg()">
+      </div>
+      <button type="button" class="send-btn" onclick="sendMsg()" aria-label="发送">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round">
           <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
         </svg>
@@ -1521,7 +2081,11 @@
       <div class="drawer-section-title">行动卡片</div>
       <div class="card-summary-entry" onclick="closeDrawer(); showListPage('cards')">
         <div class="card-summary-left">
-          <div class="card-summary-icon">✦</div>
+          <div class="card-summary-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2l1.2 4.5L18 8l-4.8 1.5L12 14l-1.2-4.5L6 8l4.8-1.5L12 2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>
+            </svg>
+          </div>
           <div>
             <div class="card-summary-main" id="summaryTotal">0 张</div>
             <div class="card-summary-sub" id="summaryPending">0 张进行中</div>
@@ -1613,9 +2177,9 @@
       </div>
     </div>
     <div class="list-page-header">
-      <div class="back-btn" onclick="hideListPage()">
+      <button type="button" class="back-btn" onclick="hideListPage()" aria-label="返回">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
+      </button>
       <div class="list-page-title" id="listPageTitle">行动卡片</div>
       <div style="width:32px"></div>
     </div>
@@ -1630,9 +2194,9 @@
   <!-- SETTINGS: 隐私与数据 -->
   <div class="settings-page" id="settingsPrivacy">
     <div class="settings-page-header">
-      <div class="back-btn" onclick="hideSettings('settingsPrivacy')">
+      <button type="button" class="back-btn" onclick="hideSettings('settingsPrivacy')" aria-label="返回">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
+      </button>
       <div class="settings-page-title">隐私与数据</div>
     </div>
     <div class="settings-page-body">
@@ -1677,9 +2241,9 @@
   <!-- SETTINGS: 提醒设置 -->
   <div class="settings-page" id="settingsReminder">
     <div class="settings-page-header">
-      <div class="back-btn" onclick="hideSettings('settingsReminder')">
+      <button type="button" class="back-btn" onclick="hideSettings('settingsReminder')" aria-label="返回">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
+      </button>
       <div class="settings-page-title">提醒设置</div>
     </div>
     <div class="settings-page-body">
@@ -1718,9 +2282,9 @@
   <!-- SETTINGS: 关于夜屿 -->
   <div class="settings-page" id="settingsAbout">
     <div class="settings-page-header">
-      <div class="back-btn" onclick="hideSettings('settingsAbout')">
+      <button type="button" class="back-btn" onclick="hideSettings('settingsAbout')" aria-label="返回">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
+      </button>
       <div class="settings-page-title">关于夜屿</div>
     </div>
     <div class="settings-page-body">
@@ -1757,9 +2321,9 @@
   <!-- SETTINGS: 关于你的记忆 -->
   <div class="settings-page" id="settingsMemory">
     <div class="settings-page-header">
-      <div class="back-btn" onclick="hideSettings('settingsMemory')">
+      <button type="button" class="back-btn" onclick="hideSettings('settingsMemory')" aria-label="返回">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E2E8F0" stroke-width="2.5" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
-      </div>
+      </button>
       <div class="settings-page-title">关于你的记忆</div>
     </div>
     <div class="settings-page-body">
@@ -1834,6 +2398,7 @@ let userName = localStorage.getItem('yeyu_username') || '';
 let userProfile = loadUserProfile();
 
 function initHome() {
+  updateHomeDate();
   if (userName) {
     showNormalHome();
   } else {
@@ -1995,6 +2560,7 @@ function showNormalHome() {
 
   // 更新抽屉用户名
   document.getElementById('drawerUsername').textContent = userName === '你' ? '匿名用户' : userName;
+  updateHomeDate();
 }
 
 function openDrawer() {
@@ -2196,6 +2762,19 @@ let greetingSubtitleTimer = null;
 function now() {
   const d = new Date();
   return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+
+const HOME_WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+
+/** 顶栏日期：与设备本地时区一致，格式「YYYY年M月D日，星期X」 */
+function formatHomeDate(d) {
+  const x = d instanceof Date ? d : new Date(d);
+  return `${x.getFullYear()}年${x.getMonth() + 1}月${x.getDate()}日，${HOME_WEEKDAYS[x.getDay()]}`;
+}
+
+function updateHomeDate() {
+  const el = document.getElementById('homeDate');
+  if (el) el.textContent = formatHomeDate(new Date());
 }
 
 function playGreetingSubtitle() {
@@ -2454,9 +3033,20 @@ function initHomeAmbient() {
   });
 }
 
+/** 切入的 .screen 立即不透明，下层仅淡出（避免半透明叠在首页上） */
+function activateScreen(el) {
+  if (!el) return;
+  const t = el.style.transition;
+  el.style.transition = 'none';
+  el.classList.add('active');
+  void el.offsetHeight;
+  el.style.transition = t;
+}
+
 function goHome() {
-  document.getElementById('home').classList.add('active');
   document.getElementById('chat').classList.remove('active');
+  activateScreen(document.getElementById('home'));
+  updateHomeDate();
   tryResumeHomeAmbient();
 }
 
@@ -2469,7 +3059,7 @@ function startChat(text) {
   msgCount = 0;
 
   document.getElementById('home').classList.remove('active');
-  document.getElementById('chat').classList.add('active');
+  activateScreen(document.getElementById('chat'));
   document.getElementById('chatTime').textContent = now();
   document.getElementById('messages').innerHTML = '';
   document.getElementById('actionCardWrap').style.display = 'none';
@@ -2549,6 +3139,75 @@ function addMsg(role, text) {
   }
 }
 
+/** Figma 导出：一次性渲染完整气泡（无打字机），避免截屏时 AI 话只说了一半 */
+function appendStaticChatBubble(role, text) {
+  const msgs = document.getElementById('messages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = `msg ${role === 'assistant' ? 'ai' : role}`;
+  const timeStr = now();
+  const body = text.replace(/\n/g, '<br>');
+  div.innerHTML = `<div class="bubble">${body}</div><div class="msg-time">${timeStr}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+/** Figma 导出：带多轮对话的聊天页（?figmaView=chat&figmaChat=demo） */
+function seedFigmaChatDemo() {
+  removeThinking();
+  isThinking = false;
+  cardGenerated = false;
+  historySavedForCurrentSession = false;
+  msgCount = 3;
+  currentInput = '';
+
+  const wrap = document.getElementById('actionCardWrap');
+  const bar = document.getElementById('cardBar');
+  if (wrap) wrap.style.display = 'none';
+  if (bar) bar.classList.remove('show');
+
+  const inputWrap = document.getElementById('chatInputWrap');
+  if (inputWrap) {
+    inputWrap.style.display = 'flex';
+    inputWrap.classList.remove('thinking-state');
+  }
+  const ci = document.getElementById('chatInput');
+  if (ci) {
+    ci.value = '';
+    ci.style.height = 'auto';
+    ci.placeholder = '说点什么…';
+  }
+  const st = document.getElementById('chatStatus');
+  if (st) st.textContent = '正在陪伴';
+  const ct = document.getElementById('chatTime');
+  if (ct) ct.textContent = now();
+
+  const box = document.getElementById('messages');
+  if (box) box.innerHTML = '';
+
+  const demoUser1 = '今天在会上被否定了，散会之后一直在想是不是我不行。';
+  const demoAi1 = '先停一下，我在这里。\n\n那种被当众否掉的感觉，脸上发烧、想躲起来——确实很刺人。你现在身体哪里最紧绷？';
+  const demoUser2 = '胃和胸口，一想到那个场景就缩起来。';
+  const demoAi2 = '听起来身体在替你喊停。\n\n如果暂时不把「我不行」当成事实，只当作脑子里闪过的声音：有哪些迹象好像支持它，又有哪些其实没那么绝对？';
+
+  appendStaticChatBubble('user', demoUser1);
+  appendStaticChatBubble('ai', demoAi1);
+  appendStaticChatBubble('user', demoUser2);
+  appendStaticChatBubble('ai', demoAi2);
+
+  conversationHistory = [
+    { role: 'user', content: demoUser1 },
+    { role: 'assistant', content: demoAi1 },
+    { role: 'user', content: demoUser2 },
+    { role: 'assistant', content: demoAi2 }
+  ];
+
+  setTimeout(() => {
+    const m = document.getElementById('messages');
+    if (m) m.scrollTop = m.scrollHeight;
+  }, 80);
+}
+
 function addThinking() {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
@@ -2601,7 +3260,7 @@ function addTransition(text) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.style.cssText = 'text-align:center;padding:4px 0 8px;animation:msgIn 0.3s ease';
-  div.innerHTML = `<span style="font-size:12px;color:rgba(148,163,184,0.5);letter-spacing:0.06em">✦ ${text} ✦</span>`;
+  div.innerHTML = `<span style="font-size:12px;color:rgba(148,163,184,0.5);letter-spacing:0.06em" role="status">${text}</span>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 }
@@ -3077,9 +3736,31 @@ function bindMemoryNoteInput() {
   });
 }
 
+/** Figma 导出：列表页有内容（不写 localStorage） */
+const FIGMA_DEMO_HISTORY = [
+  { id: 'figma-h1', month: '2025年3月', date: '3月20日', title: '会上被否之后的羞耻和愤怒', hasCard: true, tags: ['职场', '委屈'] },
+  { id: 'figma-h2', month: '2025年3月', date: '3月15日', title: '已读不回时的反复看手机', hasCard: false, tags: ['关系', '焦虑'] },
+  { id: 'figma-h3', month: '2025年3月', date: '3月8日', title: '绩效被压一档后的自我怀疑', hasCard: true, tags: ['职场'] },
+  { id: 'figma-h4', month: '2025年2月', date: '2月26日', title: '和父母通完电话心里又堵又空', hasCard: false, tags: ['家庭'] }
+];
+const FIGMA_DEMO_CARDS = [
+  { id: 'figma-c1', month: '2025年3月', date: '3月18日', thought: '「我不够好」一冒出来，我就默认它是真的。', reframe: '念头不等于事实；可以先把它当成天气，会过去。', action: '今晚写两句：支持它的证据 vs 反例，各一条。', status: 'pending' },
+  { id: 'figma-c2', month: '2025年3月', date: '3月10日', thought: 'TA 不回消息就是不在乎我。', reframe: '已读不回有很多可能，不等于「我不值得」。', action: '设定一次 15 分钟「不看手机」的小窗口。', status: 'done' }
+];
+
 // MOCK_CARDS / MOCK_HISTORY 改为从 localStorage 读取
-function getMockCards() { return getCards(); }
-function getMockHistory() { return getHistory(); }
+function getMockCards() {
+  try {
+    if (new URLSearchParams(window.location.search).get('figmaCards') === 'demo') return FIGMA_DEMO_CARDS;
+  } catch (e) {}
+  return getCards();
+}
+function getMockHistory() {
+  try {
+    if (new URLSearchParams(window.location.search).get('figmaList') === 'demo') return FIGMA_DEMO_HISTORY;
+  } catch (e) {}
+  return getHistory();
+}
 
 let currentListType = 'cards';
 let currentTab = 'all';
@@ -3108,12 +3789,13 @@ function showListPage(type) {
   pauseHomeAmbient();
   document.getElementById('home').classList.remove('active');
   document.getElementById('chat').classList.remove('active');
-  document.getElementById('listPage').classList.add('active');
+  activateScreen(document.getElementById('listPage'));
 }
 
 function hideListPage() {
   document.getElementById('listPage').classList.remove('active');
-  document.getElementById('home').classList.add('active');
+  activateScreen(document.getElementById('home'));
+  updateHomeDate();
   tryResumeHomeAmbient();
 }
 
@@ -3189,11 +3871,101 @@ function resetName() {
 }
 
 function syncOrbTimePeriod() {
-  const wrap = document.getElementById('orbWrap');
-  if (!wrap) return;
+  let period = '';
   try {
-    wrap.dataset.timePeriod = getTimeContext().period;
+    period = getTimeContext().period;
   } catch (e) {}
+  const wrap = document.getElementById('orbWrap');
+  if (wrap) wrap.dataset.timePeriod = period;
+  const chatOrb = document.getElementById('chatOrb');
+  if (chatOrb) chatOrb.dataset.timePeriod = period;
+}
+
+/** Figma 批量捕获：?figmaView= 切换界面（需与 #figmacapture= 同页使用） */
+function applyFigmaCaptureView() {
+  if (/\bfigmacapture=/.test(location.hash)) {
+    document.documentElement.classList.add('figma-capture-frame');
+  }
+  const params = new URLSearchParams(location.search);
+  const view = params.get('figmaView');
+  if (!view) return;
+
+  ['settingsPrivacy', 'settingsReminder', 'settingsAbout', 'settingsMemory'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
+  try {
+    closeDrawer();
+  } catch (e) {}
+
+  const home = document.getElementById('home');
+  const chat = document.getElementById('chat');
+  const listPage = document.getElementById('listPage');
+  if (!home || !chat || !listPage) return;
+
+  switch (view) {
+    case 'home': {
+      const setup = document.getElementById('nameSetup');
+      if (setup && setup.style.display !== 'none' && typeof showNormalHome === 'function') {
+        showNormalHome();
+      }
+      listPage.classList.remove('active');
+      chat.classList.remove('active');
+      activateScreen(home);
+      break;
+    }
+    case 'chat': {
+      listPage.classList.remove('active');
+      home.classList.remove('active');
+      activateScreen(chat);
+      try {
+        if (params.get('figmaChat') === 'demo' && typeof seedFigmaChatDemo === 'function') {
+          seedFigmaChatDemo();
+        }
+      } catch (e) {}
+      break;
+    }
+    case 'list-cards':
+      if (typeof showListPage === 'function') showListPage('cards');
+      break;
+    case 'list-history':
+      if (typeof showListPage === 'function') showListPage('history');
+      break;
+    case 'drawer':
+      listPage.classList.remove('active');
+      chat.classList.remove('active');
+      activateScreen(home);
+      if (typeof openDrawer === 'function') openDrawer();
+      break;
+    case 'settings-privacy':
+      listPage.classList.remove('active');
+      chat.classList.remove('active');
+      activateScreen(home);
+      if (typeof showSettings === 'function') showSettings('settingsPrivacy');
+      break;
+    case 'settings-reminder':
+      listPage.classList.remove('active');
+      chat.classList.remove('active');
+      activateScreen(home);
+      if (typeof showSettings === 'function') showSettings('settingsReminder');
+      break;
+    case 'settings-about':
+      listPage.classList.remove('active');
+      chat.classList.remove('active');
+      activateScreen(home);
+      if (typeof showSettings === 'function') showSettings('settingsAbout');
+      break;
+    case 'settings-memory':
+      listPage.classList.remove('active');
+      chat.classList.remove('active');
+      activateScreen(home);
+      if (typeof renderMemorySettings === 'function') renderMemorySettings();
+      if (typeof showSettings === 'function') showSettings('settingsMemory');
+      break;
+    default:
+      break;
+  }
+  try { updateHomeDate(); } catch (e) {}
 }
 
 // 页面加载
@@ -3205,6 +3977,11 @@ window.addEventListener('load', () => {
   updateStats();
   renderDrawerHistory();
   bindMemoryNoteInput();
+  setTimeout(() => {
+    try {
+      applyFigmaCaptureView();
+    } catch (e) {}
+  }, 320);
 });
 </script>
 </body>
