@@ -2709,7 +2709,7 @@ function getChatPayload() {
     messages: [
       { role: 'system', content: SYSTEM_PROMPT },
       { role: 'system', content: timeInfo + (profileInfo ? '\n' + profileInfo : '') },
-      ...conversationHistory
+      ...conversationHistory.slice(-20)
     ]
   };
 }
@@ -3104,6 +3104,15 @@ function sendMsg() {
 }
 
 // ─── UI 工具函数 ─────────────────────────────────────────────
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function showThinkingThen(cb) {
   addThinking();
   const delay = 1400 + Math.random() * 600;
@@ -3144,7 +3153,17 @@ function addMsg(role, text) {
     }
     setTimeout(typeNext, 60);
   } else {
-    div.innerHTML = `<div class="bubble">${text.replace(/\n/g,'<br>')}</div><div class="msg-time">${timeStr}</div>`;
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    text.split('\n').forEach((line, i, arr) => {
+      bubble.appendChild(document.createTextNode(line));
+      if (i < arr.length - 1) bubble.appendChild(document.createElement('br'));
+    });
+    const timeDiv = document.createElement('div');
+    timeDiv.className = 'msg-time';
+    timeDiv.textContent = timeStr;
+    div.appendChild(bubble);
+    div.appendChild(timeDiv);
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
   }
@@ -3157,8 +3176,17 @@ function appendStaticChatBubble(role, text) {
   const div = document.createElement('div');
   div.className = `msg ${role === 'assistant' ? 'ai' : role}`;
   const timeStr = now();
-  const body = text.replace(/\n/g, '<br>');
-  div.innerHTML = `<div class="bubble">${body}</div><div class="msg-time">${timeStr}</div>`;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  text.split('\n').forEach((line, i, arr) => {
+    bubble.appendChild(document.createTextNode(line));
+    if (i < arr.length - 1) bubble.appendChild(document.createElement('br'));
+  });
+  const timeDiv = document.createElement('div');
+  timeDiv.className = 'msg-time';
+  timeDiv.textContent = timeStr;
+  div.appendChild(bubble);
+  div.appendChild(timeDiv);
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 }
@@ -3318,7 +3346,16 @@ function renderDrawerHistory() {
   history.forEach(h => {
     const item = document.createElement('div');
     item.className = 'history-item';
-    item.innerHTML = `<div class="history-item-title">${h.title}</div><div class="history-item-meta"><span>${h.date}</span></div>`;
+    const titleDiv = document.createElement('div');
+    titleDiv.className = 'history-item-title';
+    titleDiv.textContent = h.title;
+    const metaDiv = document.createElement('div');
+    metaDiv.className = 'history-item-meta';
+    const span = document.createElement('span');
+    span.textContent = h.date;
+    metaDiv.appendChild(span);
+    item.appendChild(titleDiv);
+    item.appendChild(metaDiv);
     item.onclick = () => { closeDrawer(); startChat(h.title); };
     historyTitle.insertAdjacentElement('afterend', item);
   });
@@ -3336,7 +3373,16 @@ function prependHistoryItem(title) {
 
   const item = document.createElement('div');
   item.className = 'history-item';
-  item.innerHTML = `<div class="history-item-title">${title}</div><div class="history-item-meta"><span>${dateStr}</span></div>`;
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'history-item-title';
+  titleDiv.textContent = title;
+  const metaDiv = document.createElement('div');
+  metaDiv.className = 'history-item-meta';
+  const span = document.createElement('span');
+  span.textContent = dateStr;
+  metaDiv.appendChild(span);
+  item.appendChild(titleDiv);
+  item.appendChild(metaDiv);
   item.onclick = () => { closeDrawer(); startChat(title); };
   historyTitle.insertAdjacentElement('afterend', item);
 }
@@ -3819,8 +3865,8 @@ function switchTab(el, tab) {
 
 function renderList(tab) {
   const body = document.getElementById('listBody');
-  body.innerHTML = '';
   let lastMonth = '';
+  const parts = [];
 
   if (currentListType === 'cards') {
     const MOCK_CARDS = getMockCards();
@@ -3829,28 +3875,29 @@ function renderList(tab) {
     filtered.forEach((c, idx) => {
       if (c.month !== lastMonth) {
         lastMonth = c.month;
-        body.innerHTML += `<div class="list-month-label">${c.month}</div>`;
+        parts.push(`<div class="list-month-label">${escapeHtml(c.month)}</div>`);
       }
       const isDone = c.status === 'done';
-      body.innerHTML += `
+      parts.push(`
         <div class="list-card-item" id="lc-${idx}" onclick="toggleListCard('lc-${idx}')">
-          <div class="list-card-thought">${(c.thought || '').replace(/"/g, '&quot;')}</div>
-          <div class="list-card-action">${(c.action || '').replace(/"/g, '&quot;')}</div>
+          <div class="list-card-thought">${escapeHtml(c.thought)}</div>
+          <div class="list-card-action">${escapeHtml(c.action)}</div>
           <div class="list-card-footer">
-            <div class="list-card-date">${c.date}</div>
+            <div class="list-card-date">${escapeHtml(c.date)}</div>
             <div class="list-card-badge ${isDone ? 'done' : 'pending'}" id="lc-badge-${idx}">${isDone ? '已完成' : '进行中'}</div>
           </div>
           <div class="list-card-expand" id="lc-detail-${idx}">
             <div style="height:1px;background:rgba(255,255,255,0.06);margin:12px 0"></div>
             <div class="card-detail-label">换个角度看</div>
-            <div class="card-detail-reframe">${(c.reframe || '你做过的事是真实的，局势比你想的更复杂。').replace(/"/g, '&quot;')}</div>
+            <div class="card-detail-reframe">${escapeHtml(c.reframe || '你做过的事是真实的，局势比你想的更复杂。')}</div>
             <div class="card-status-toggle">
-              <button class="card-toggle-btn ${!isDone ? 'active-pending' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${c.id},'pending')">进行中</button>
-              <button class="card-toggle-btn ${isDone ? 'active-done' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${c.id},'done')">已完成 ✓</button>
+              <button class="card-toggle-btn ${!isDone ? 'active-pending' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${Number(c.id)},'pending')">进行中</button>
+              <button class="card-toggle-btn ${isDone ? 'active-done' : ''}" onclick="setListCardStatus(event,'lc-${idx}',${Number(c.id)},'done')">已完成 ✓</button>
             </div>
           </div>
-        </div>`;
+        </div>`);
     });
+    body.innerHTML = parts.join('');
   } else {
     const MOCK_HISTORY = getMockHistory();
     const filtered = MOCK_HISTORY.filter(h =>
@@ -3860,16 +3907,22 @@ function renderList(tab) {
     filtered.forEach(h => {
       if (h.month !== lastMonth) {
         lastMonth = h.month;
-        body.innerHTML += `<div class="list-month-label">${h.month}</div>`;
+        parts.push(`<div class="list-month-label">${escapeHtml(h.month)}</div>`);
       }
-      const tags = h.tags.map(t => `<div class="list-history-tag">${t}</div>`).join('');
+      const tags = h.tags.map(t => `<div class="list-history-tag">${escapeHtml(t)}</div>`).join('');
       const cardBadge = h.hasCard ? `<div class="list-history-tag" style="background:rgba(255,159,104,0.08);color:rgba(255,159,104,0.6)">已收卡片</div>` : '';
-      const safeTitle = (h.title || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-      body.innerHTML += `
-        <div class="list-history-item" onclick="hideListPage(); startChat('${safeTitle}')">
-          <div class="list-history-title">${h.title}</div>
-          <div class="list-history-footer">${tags}${cardBadge}<div class="list-history-date">${h.date}</div></div>
-        </div>`;
+      parts.push(`
+        <div class="list-history-item" data-title="${escapeHtml(h.title)}">
+          <div class="list-history-title">${escapeHtml(h.title)}</div>
+          <div class="list-history-footer">${tags}${cardBadge}<div class="list-history-date">${escapeHtml(h.date)}</div></div>
+        </div>`);
+    });
+    body.innerHTML = parts.join('');
+    body.querySelectorAll('.list-history-item').forEach(el => {
+      el.addEventListener('click', () => {
+        hideListPage();
+        startChat(el.dataset.title);
+      });
     });
   }
 }
