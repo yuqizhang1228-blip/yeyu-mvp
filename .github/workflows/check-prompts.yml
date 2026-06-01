@@ -1,0 +1,33 @@
+name: Prompt 一致性检查
+
+on:
+  push:
+    paths:
+      - "index.html"
+      - "prompts/**"
+      - "scripts/check-prompts.js"
+  pull_request:
+    paths:
+      - "index.html"
+      - "prompts/**"
+      - "scripts/check-prompts.js"
+
+jobs:
+  check-prompts:
+    name: 检查 prompts/*.md 与 index.html 一致性
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 运行一致性检查
+        run: npm run check:prompts

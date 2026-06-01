@@ -328,7 +328,7 @@ async function main() {
     ],
     metadata: {
       model: "deepseek-chat",
-      prompt_source: "index.html SYSTEM_PROMPT",
+      prompt_source: "prompts/system_production.md",
       dataset: path.basename(datasetPath),
     },
   });
