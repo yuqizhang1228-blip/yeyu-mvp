@@ -1,0 +1,44 @@
+# Xcode 构建产物
+build/
+DerivedData/
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcshareddata/
+*.xcodeproj/xcshareddata/
+
+# 用户自定义 Xcode 方案（只提交共享方案）
+*.xcodeproj/xcuserdata/
+xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+.swiftpm/
+
+# CocoaPods（本项目暂不使用，保留以防后续引入）
+Pods/
+Podfile.lock
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots/**/*.png
+fastlane/test_output
+
+# 证书/描述文件（不提交，走 Keychain/CI 变量）
+*.p12
+*.mobileprovision
+*.cer
+
+# macOS 系统文件
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+Icon?
+
+# 编辑器
+.cursor/
+*.swp
+*~
