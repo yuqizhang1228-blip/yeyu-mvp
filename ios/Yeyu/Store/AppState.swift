@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 @Observable
 final class AppState {
@@ -9,6 +12,14 @@ final class AppState {
     var showSettings = false
     /// 个性化页作为 sheet 呈现
     var showPersonalization = false
+
+    /// 打开左侧抽屉，并给一次轻触觉反馈（YUQ-30：点击抽屉 icon 同时振动）。
+    func openDrawer() {
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
+        drawerOpen = true
+    }
 
     func openChat(sessionId: UUID = UUID(), initialMessage: String? = nil) {
         navigationPath.append(AppRoute.chat(sessionId: sessionId, initialMessage: initialMessage))
