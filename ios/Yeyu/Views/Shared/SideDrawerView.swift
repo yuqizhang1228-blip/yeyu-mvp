@@ -2,6 +2,7 @@ import SwiftUI
 import SwiftData
 
 /// 左侧抽屉 — 功能范围见 `ios/DRAWER_SCOPE.md`（勿按 YUQ-30 全量 spec 扩入口）。
+/// 设计稿：Figma `226:2399`（0515 · 左侧弹窗，v1 功能子集）
 struct SideDrawerView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
@@ -13,7 +14,7 @@ struct SideDrawerView: View {
     var body: some View {
         if appState.drawerOpen {
             ZStack(alignment: .leading) {
-                YeyuColor.overlay
+                Color.black.opacity(0.5)
                     .ignoresSafeArea()
                     .onTapGesture { appState.drawerOpen = false }
 
@@ -26,17 +27,20 @@ struct SideDrawerView: View {
 
     private var drawerPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
+
+            // ── 品牌标题 ──────────────────────────────────────
             VStack(alignment: .leading, spacing: YeyuSpacing.xs) {
                 Text("夜屿")
-                    .font(YeyuTypography.title)
-                    .foregroundStyle(YeyuColor.textTitle)
-                Text(YeyuUser.drawerLabel(stored: username))
+                    .font(.system(size: 24, weight: .regular))
+                    .foregroundStyle(.white)
+                Text("一款情绪拆解 AI 助手")
                     .font(YeyuTypography.footnote)
-                    .foregroundStyle(YeyuColor.textTertiary)
+                    .foregroundStyle(Color.white.opacity(0.7))
             }
             .padding(.bottom, YeyuSpacing.xxl)
 
-            navRow(icon: "rectangle.stack", label: "行动卡片") {
+            // ── 功能入口 ─────────────────────────────────────
+            navRow(icon: "heart.text.square", label: "行动卡片") {
                 appState.drawerOpen = false
                 appState.openHistory()
             }
@@ -45,20 +49,19 @@ struct SideDrawerView: View {
                 appState.openSettings()
             }
 
+            // ── 最近对话 ─────────────────────────────────────
             Text("最近对话")
                 .font(YeyuTypography.footnote)
-                .foregroundStyle(YeyuColor.textTertiary)
+                .foregroundStyle(Color.white.opacity(0.4))
                 .padding(.top, YeyuSpacing.xxl)
                 .padding(.bottom, YeyuSpacing.sm)
 
             ScrollView {
-                VStack(spacing: YeyuSpacing.sm) {
+                VStack(spacing: 0) {
                     ForEach(sessions.prefix(12)) { session in
                         Button {
                             appState.drawerOpen = false
-                            if session.id == currentSessionId {
-                                return
-                            }
+                            if session.id == currentSessionId { return }
                             if currentSessionId != nil {
                                 appState.replaceChat(sessionId: session.id, initialMessage: nil)
                             } else {
@@ -67,16 +70,16 @@ struct SideDrawerView: View {
                         } label: {
                             HStack {
                                 Text(session.title)
-                                    .font(YeyuTypography.body)
+                                    .font(.system(size: 16))
                                     .foregroundStyle(
                                         session.id == currentSessionId
                                             ? YeyuColor.primary
-                                            : YeyuColor.textSecondary
+                                            : .white
                                     )
                                     .lineLimit(1)
                                 Spacer()
                             }
-                            .padding(.vertical, YeyuSpacing.sm)
+                            .padding(.vertical, YeyuSpacing.md)
                         }
                     }
                 }
@@ -87,23 +90,37 @@ struct SideDrawerView: View {
         .padding(.horizontal, YeyuSpacing.xl)
         .padding(.top, YeyuSpacing.xxxl)
         .padding(.bottom, YeyuSpacing.xl)
-        .frame(width: 304)
+        .frame(width: 320)
         .frame(maxHeight: .infinity)
-        .background(YeyuColor.backgroundElevated)
+        .background {
+            ZStack {
+                Color(hex: 0x1A1A1A, alpha: 0.92)
+            }
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+        }
+        .overlay(alignment: .trailing) {
+            // 右侧内边缘分割线（Figma: inset -1px 0px rgba(255,255,255,0.05)）
+            Rectangle()
+                .fill(Color.white.opacity(0.05))
+                .frame(width: 1)
+        }
     }
 
     private func navRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: YeyuSpacing.md) {
                 Image(systemName: icon)
-                    .foregroundStyle(YeyuColor.textSecondary)
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.white.opacity(0.7))
+                    .frame(width: 20)
                 Text(label)
-                    .font(YeyuTypography.callout)
-                    .foregroundStyle(YeyuColor.textPrimary)
+                    .font(YeyuTypography.body)
+                    .foregroundStyle(.white)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.footnote)
-                    .foregroundStyle(YeyuColor.textTertiary)
+                    .foregroundStyle(Color.white.opacity(0.3))
             }
             .padding(.vertical, YeyuSpacing.md)
         }

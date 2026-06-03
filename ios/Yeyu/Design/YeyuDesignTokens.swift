@@ -48,6 +48,10 @@ enum YeyuColor {
     static let backgroundSheet = Color(hex: 0x2C2C2C)
     /// 行动卡片 hero 块 `#383838`
     static let surfaceActionCard = Color(hex: 0x383838)
+
+    // MARK: 侧抽屉（0515 · 226:2399）
+    /// 抽屉底板（暖深灰，模拟 blur+overlay 效果）
+    static let backgroundDrawer = Color(hex: 0x1A1A1A)
 }
 
 enum YeyuSpacing {

@@ -66,21 +66,36 @@ struct HomeView: View {
 
     private var greeting: some View {
         VStack(alignment: .leading, spacing: YeyuSpacing.sm) {
-            Text(formattedDate)
-                .font(YeyuTypography.footnote)
-                .foregroundStyle(YeyuColor.textTertiary)
-            if let name = YeyuUser.displayName(stored: username) {
-                Text("\(name)，今晚想聊点什么？")
-                    .font(YeyuTypography.title)
+            // 两行问候，对齐 Figma 411:1996 · 26pt regular
+            VStack(alignment: .leading, spacing: 2) {
+                Text(timeGreeting + "，")
+                    .font(YeyuTypography.displayGreeting)
                     .foregroundStyle(YeyuColor.textTitle)
-            } else {
-                Text("今晚，想聊点什么？")
-                    .font(YeyuTypography.title)
-                    .foregroundStyle(YeyuColor.textTitle)
+                if let name = YeyuUser.displayName(stored: username) {
+                    Text("\(name)，今晚想聊点什么？")
+                        .font(YeyuTypography.displayGreeting)
+                        .foregroundStyle(YeyuColor.textTitle)
+                } else {
+                    Text("欢迎来到夜屿。")
+                        .font(YeyuTypography.displayGreeting)
+                        .foregroundStyle(YeyuColor.textTitle)
+                }
             }
-            Text("我是陪你理一理情绪的小岛守夜人")
-                .font(YeyuTypography.body)
-                .foregroundStyle(YeyuColor.textSecondary)
+            Text("在这里分享你的困惑，我来帮你梳理思绪。")
+                .font(YeyuTypography.footnote)
+                .foregroundStyle(Color.white.opacity(0.8))
+        }
+    }
+
+    private var timeGreeting: String {
+        let hour = Calendar.current.component(.hour, from: .now)
+        switch hour {
+        case 5..<9:  return "早上好"
+        case 9..<12: return "上午好"
+        case 12..<17: return "下午好"
+        case 17..<19: return "傍晚好"
+        case 19..<23: return "晚上好"
+        default:     return "夜深了"
         }
     }
 
@@ -153,13 +168,6 @@ struct HomeView: View {
             .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             .opacity(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.4 : 1)
         }
-    }
-
-    private var formattedDate: String {
-        let f = DateFormatter()
-        f.locale = Locale(identifier: "zh_CN")
-        f.dateFormat = "M月d日 EEEE"
-        return f.string(from: .now)
     }
 
     private func loadChips() async {
