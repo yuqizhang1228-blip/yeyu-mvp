@@ -73,10 +73,6 @@ struct ChatView: View {
                     onContinue: {
                         pendingCard = nil
                         cardSheetReviewMode = false
-                    },
-                    onDiscard: {
-                        pendingCard = nil
-                        cardSheetReviewMode = false
                     }
                 )
             }

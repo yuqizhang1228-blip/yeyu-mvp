@@ -1,110 +1,139 @@
 import SwiftUI
 
 /// 心情卡片确认流（YUQ-44）
+/// 设计稿：Figma `394:2232`（0515 · 心情卡片弹出）
 struct ActionCardSheet: View {
     let card: ParsedActionCard
     /// 已保存后从卡片条点开，仅查看
     var isReviewMode: Bool = false
     let onSave: () -> Void
     let onContinue: () -> Void
-    let onDiscard: () -> Void
 
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        NavigationStack {
+        VStack(spacing: 0) {
+            // ── 标题 ──────────────────────────────────────────
+            Text("行动卡片")
+                .font(YeyuTypography.callout.weight(.medium))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.top, YeyuSpacing.xl)
+                .padding(.bottom, YeyuSpacing.lg)
+
+            // ── 内容区 ────────────────────────────────────────
             ScrollView {
-                VStack(alignment: .leading, spacing: YeyuSpacing.lg) {
-                    Text("今晚的整理")
-                        .font(YeyuTypography.title)
-                        .foregroundStyle(YeyuColor.textTitle)
+                VStack(alignment: .leading, spacing: YeyuSpacing.xl) {
 
-                    cardSection(title: "💭 原来的想法", body: card.thought)
-                    cardSection(title: "🌱 新的视角", body: card.reframe)
+                    sectionBlock(label: "你的心情", body: card.thought)
+                    sectionBlock(label: "换个角度", body: card.reframe)
 
+                    // 行动卡片 hero
                     if !card.actionItems.isEmpty {
                         VStack(alignment: .leading, spacing: YeyuSpacing.sm) {
-                            Text("🎯 这周试试")
+                            Text("明天可以试试")
                                 .font(YeyuTypography.footnote)
-                                .foregroundStyle(YeyuColor.textTertiary)
-                            ForEach(card.actionItems, id: \.self) { item in
-                                Text("· \(item)")
-                                    .font(YeyuTypography.body)
-                                    .foregroundStyle(YeyuColor.textSecondary)
-                            }
-                        }
-                    }
+                                .foregroundStyle(Color.white.opacity(0.6))
 
-                    if isReviewMode {
-                        Button {
-                            dismiss()
-                        } label: {
-                            Text("关闭")
-                                .font(YeyuTypography.callout.weight(.semibold))
-                                .foregroundStyle(YeyuColor.textInverse)
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, YeyuSpacing.lg)
-                                .background(YeyuColor.primary)
+                            // 第一条行动：视觉主角
+                            Text(card.actionItems[0])
+                                .font(YeyuTypography.callout)
+                                .foregroundStyle(.white)
+                                .multilineTextAlignment(.center)
+                                .lineSpacing(6)
+                                .frame(maxWidth: .infinity, minHeight: 120)
+                                .padding(YeyuSpacing.xl)
+                                .background(YeyuColor.surfaceActionCard)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: YeyuRadius.lg)
+                                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                                )
                                 .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
-                        }
-                        .padding(.top, YeyuSpacing.md)
-                    } else {
-                        VStack(spacing: YeyuSpacing.md) {
-                            Button {
-                                onSave()
-                                dismiss()
-                            } label: {
-                                Text("保存卡片")
-                                    .font(YeyuTypography.callout.weight(.semibold))
-                                    .foregroundStyle(YeyuColor.textInverse)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, YeyuSpacing.lg)
-                                    .background(YeyuColor.primary)
-                                    .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
-                            }
 
-                            Button {
-                                onContinue()
-                                dismiss()
-                            } label: {
-                                Text("继续聊")
-                                    .font(YeyuTypography.callout)
-                                    .foregroundStyle(YeyuColor.primary)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(.vertical, YeyuSpacing.md)
-                            }
-
-                            Button(role: .destructive) {
-                                onDiscard()
-                                dismiss()
-                            } label: {
-                                Text("放弃这张卡")
+                            // 多余的行动条目（小字补充）
+                            ForEach(Array(card.actionItems.dropFirst()), id: \.self) { item in
+                                Text("· \(item)")
                                     .font(YeyuTypography.footnote)
+                                    .foregroundStyle(Color.white.opacity(0.6))
+                                    .lineSpacing(4)
                             }
                         }
-                        .padding(.top, YeyuSpacing.md)
                     }
                 }
-                .padding(YeyuSpacing.xl)
+                .padding(.horizontal, YeyuSpacing.xxl)
+                .padding(.bottom, YeyuSpacing.xl)
             }
-            .background(YeyuColor.backgroundBase)
+
+            // ── 按钮区 ────────────────────────────────────────
+            if isReviewMode {
+                closeButton
+                    .padding(.horizontal, YeyuSpacing.xxl)
+                    .padding(.bottom, YeyuSpacing.xxl)
+            } else {
+                HStack(spacing: YeyuSpacing.md) {
+                    // 继续聊：描边
+                    Button {
+                        onContinue()
+                        dismiss()
+                    } label: {
+                        Text("继续聊")
+                            .font(YeyuTypography.callout)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 1))
+                    }
+
+                    // 保存卡片：实心
+                    Button {
+                        onSave()
+                        dismiss()
+                    } label: {
+                        Text("保存卡片")
+                            .font(YeyuTypography.callout.weight(.medium))
+                            .foregroundStyle(.black)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 48)
+                            .background(Color.white.opacity(0.9))
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(.horizontal, YeyuSpacing.xxl)
+                .padding(.bottom, YeyuSpacing.xxl)
+            }
         }
-        .presentationDetents([.medium, .large])
+        .background(YeyuColor.backgroundSheet)
+        .presentationDetents([.large])
         .presentationDragIndicator(.visible)
+        .presentationCornerRadius(12)
     }
 
-    private func cardSection(title: String, body: String) -> some View {
+    // MARK: - 子视图
+
+    private func sectionBlock(label: String, body: String) -> some View {
         VStack(alignment: .leading, spacing: YeyuSpacing.xs) {
-            Text(title)
-                .font(YeyuTypography.footnote)
-                .foregroundStyle(YeyuColor.textTertiary)
-            Text(body)
+            Text(label)
                 .font(YeyuTypography.body)
-                .foregroundStyle(YeyuColor.textPrimary)
-                .padding(YeyuSpacing.lg)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(YeyuColor.backgroundSurface)
-                .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
+                .foregroundStyle(.white)
+            Text(body)
+                .font(YeyuTypography.footnote)
+                .foregroundStyle(Color.white.opacity(0.6))
+                .lineSpacing(4)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var closeButton: some View {
+        Button {
+            dismiss()
+        } label: {
+            Text("关闭")
+                .font(YeyuTypography.callout.weight(.medium))
+                .foregroundStyle(.black)
+                .frame(maxWidth: .infinity)
+                .frame(height: 48)
+                .background(Color.white.opacity(0.9))
+                .clipShape(Capsule())
         }
     }
 }

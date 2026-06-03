@@ -42,6 +42,12 @@ enum YeyuColor {
     static let textCompliance = Color.white.opacity(0.30)
     /// 0515 主文案 80% 白
     static let textOnDarkSecondary = Color.white.opacity(0.80)
+
+    // MARK: Sheet / 卡片弹窗（0515 · 394:2232）
+    /// 出卡弹窗底板 `#2C2C2C`
+    static let backgroundSheet = Color(hex: 0x2C2C2C)
+    /// 行动卡片 hero 块 `#383838`
+    static let surfaceActionCard = Color(hex: 0x383838)
 }
 
 enum YeyuSpacing {
