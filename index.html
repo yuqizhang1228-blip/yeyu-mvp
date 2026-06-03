@@ -629,6 +629,7 @@
       animation: none !important;
     }
     .msg, .thinking, .collect-btns { opacity: 1 !important; transform: none !important; }
+    .thinking-dot { animation: none !important; opacity: 0.55 !important; transform: none !important; }
     .input-box:focus-visible { filter: none !important; }
     .input-glass-ring {
       box-shadow: 0 3px 14px rgba(0, 0, 0, 0.45) !important;
@@ -1835,6 +1836,73 @@
   }
   .collect-btns.fading { animation: fadeOut 0.2s ease forwards; pointer-events: none; }
 
+  /* ===== CHAT: THINKING BUBBLE ===== */
+  /* 替换文字版 thinking 为气泡三点样式，与 AI 消息视觉一致 */
+  .thinking {
+    display: flex; flex-direction: column;
+    align-self: flex-start; align-items: flex-start;
+    padding: 6px 4px 8px;
+    animation: msgIn 0.25s ease;
+  }
+  .bubble--thinking {
+    display: flex; align-items: center; gap: 6px;
+    padding: 14px 18px; min-height: 46px;
+    line-height: 1.62;
+    color: #FFF9F5;
+    background: linear-gradient(165deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 140, 100, 0.09) 100%);
+    border: 1px solid rgba(255, 190, 160, 0.22);
+    border-radius: var(--radius-bubble);
+    border-bottom-left-radius: 8px;
+    backdrop-filter: blur(28px) saturate(1.65);
+    -webkit-backdrop-filter: blur(28px) saturate(1.65);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.16),
+      0 6px 24px rgba(0, 0, 0, 0.2),
+      0 0 40px rgba(255, 159, 104, 0.05);
+  }
+  .thinking-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255, 190, 160, 0.65);
+    animation: thinking-bounce 1.4s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .thinking-dot:nth-child(2) { animation-delay: 0.22s; }
+  .thinking-dot:nth-child(3) { animation-delay: 0.44s; }
+  @keyframes thinking-bounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.42; }
+    30% { transform: translateY(-5px); opacity: 1; }
+  }
+
+  /* ===== CHAT: TRANSITION LINE ===== */
+  /* 阶段过渡文字（居中细行） */
+  .msg-transition {
+    text-align: center;
+    padding: 4px 0 8px;
+    animation: msgIn 0.3s ease;
+  }
+  .msg-transition span {
+    font-size: 12px;
+    color: rgba(148, 163, 184, 0.5);
+    letter-spacing: 0.06em;
+  }
+
+  /* ===== CHAT: ERROR BUBBLE ===== */
+  /* 错误消息：红色边界，视觉区别于正常 AI 消息 */
+  .bubble--error {
+    border-color: rgba(248, 113, 113, 0.2) !important;
+    background: linear-gradient(
+      165deg,
+      rgba(248, 113, 113, 0.05) 0%,
+      rgba(18, 20, 30, 0.78) 100%
+    ) !important;
+  }
+
+  /* ===== CHAT: CHOICES BUTTONS ===== */
+  /* <choices> 解析后渲染的快速选项区块（在 AI 消息之下） */
+  .choices-wrap {
+    padding: 0 4px;
+  }
+
 </style>
 </head>
 <body>
@@ -2701,6 +2769,75 @@ JSON 数组，最多 3 项，最后一项用"说不清，我来描述"兜底；�
 
 <card>{"thought":"「我确实不行」","reframe":"「今天被否的是这个方案的需求理解，不是我整个人的能力——换成朋友我会说他运气不好」","actions":["今晚花10分钟，把被否的那条需求重新读一遍，只标出一处自己确实理解偏了的地方","明天上午找那个接手的同事，问一句'你看到的需求重点是什么'，纯学习，不用解释"]}</card>`;
 
+/**
+ * 从 AI 回复中解析并剥离 <choices>...</choices> 标签
+ * 返回 { displayText, choices: string[]|null }
+ */
+function parseAndStripChoices(text) {
+  const match = text.match(/<choices>([\s\S]*?)<\/choices>/);
+  if (!match) return { displayText: text, choices: null };
+  let choices = null;
+  try {
+    const parsed = JSON.parse(match[1].trim());
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      choices = parsed.map(c => String(c).trim()).filter(Boolean).slice(0, 3);
+      if (choices.length === 0) choices = null;
+    }
+  } catch (e) {
+    choices = null;
+  }
+  const displayText = text.replace(/<choices>[\s\S]*?<\/choices>/, '').trim();
+  return { displayText, choices };
+}
+
+/**
+ * 在消息区域渲染可点击的快速选择按钮
+ * 点击后：发淡出动画 → 以该选项文本作为用户消息继续对话
+ */
+function renderChoices(choices) {
+  if (!choices || !choices.length) return;
+  const msgs = document.getElementById('messages');
+  const wrap = document.createElement('div');
+  wrap.className = 'msg ai choices-wrap';
+  const btns = document.createElement('div');
+  btns.className = 'collect-btns';
+  btns.setAttribute('role', 'group');
+  btns.setAttribute('aria-label', '快速选择');
+  choices.forEach(opt => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'collect-btn';
+    btn.textContent = opt;
+    btn.onclick = () => {
+      if (isThinking) return;
+      btns.classList.add('fading');
+      setTimeout(() => {
+        wrap.remove();
+        addMsg('user', opt);
+        msgCount++;
+        callAI(opt);
+      }, 200);
+    };
+    btns.appendChild(btn);
+  });
+  wrap.appendChild(btns);
+  msgs.appendChild(wrap);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+/**
+ * 在消息区域渲染错误提示气泡（与正常 AI 消息视觉有所区分）
+ */
+function addErrorMsg(text) {
+  const msgs = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  const timeStr = now();
+  div.innerHTML = `<div class="bubble bubble--error">${text.replace(/\n/g, '<br>')}</div><div class="msg-time">${timeStr}</div>`;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
 function getChatPayload() {
   const timeCtx = getTimeContext();
   const timeInfo = `【当前时间】现在是${timeCtx.period}（${timeCtx.desc}）`;
@@ -2735,7 +2872,7 @@ async function callAI(userMessage) {
     if (!res.ok || data.error) {
       removeThinking();
       const errMsg = typeof data.error === 'string' ? data.error : (data.error?.message || '接口异常，请稍后重试');
-      addMsg('ai', errMsg);
+      addErrorMsg(errMsg);
       conversationHistory.pop();
       return;
     }
@@ -2747,7 +2884,9 @@ async function callAI(userMessage) {
     const cardMatch = fullText.match(/<card>([\s\S]*?)<\/card>/);
     if (cardMatch && !cardGenerated) {
       cardGenerated = true;
-      const displayText = fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim();
+      // 卡片路径：剥离 choices 和 card 标签后显示前置文本，不渲染 choices（即将进入卡片展示）
+      const beforeCard = fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim();
+      const { displayText } = parseAndStripChoices(beforeCard);
       addTransition('我们来把今晚的整理一下');
       setTimeout(() => {
         if (displayText) addMsg('ai', displayText);
@@ -2760,11 +2899,14 @@ async function callAI(userMessage) {
         }
       }, 600);
     } else {
-      addMsg('ai', fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim());
+      // 普通对话路径：解析 choices，打字机完成后渲染选项按钮
+      const stripped = fullText.replace(/<card>[\s\S]*?<\/card>/, '').trim();
+      const { displayText, choices } = parseAndStripChoices(stripped);
+      addMsg('ai', displayText, choices ? () => renderChoices(choices) : null);
     }
   } catch(err) {
     removeThinking();
-    addMsg('ai', '网络好像有点问题，稍后再试试？');
+    addErrorMsg('网络好像有点问题，稍后再试试？');
   }
 }
 
@@ -3102,6 +3244,8 @@ function sendMsg() {
   const text = input.value.trim();
   if (!text || isThinking) return;
   input.value = ''; input.style.height = 'auto';
+  // 用户主动输入时，移除当前显示的快速选项按钮（避免选项悬挂）
+  document.querySelectorAll('.choices-wrap').forEach(el => el.remove());
   addMsg('user', text);
   msgCount++;
   callAI(text);
@@ -3114,7 +3258,7 @@ function showThinkingThen(cb) {
   setTimeout(() => { removeThinking(); cb(); }, delay);
 }
 
-function addMsg(role, text) {
+function addMsg(role, text, onDone) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
   div.className = `msg ${role}`;
@@ -3134,7 +3278,12 @@ function addMsg(role, text) {
     let lineIdx = 0; let charInLine = 0;
     const speed = 18;
     function typeNext() {
-      if (lineIdx >= segments.length) { cursor.remove(); msgs.scrollTop = msgs.scrollHeight; return; }
+      if (lineIdx >= segments.length) {
+        cursor.remove();
+        msgs.scrollTop = msgs.scrollHeight;
+        if (typeof onDone === 'function') onDone();
+        return;
+      }
       const seg = segments[lineIdx];
       if (charInLine < seg.text.length) {
         cursor.insertAdjacentText('beforebegin', seg.text[charInLine]);
@@ -3151,6 +3300,7 @@ function addMsg(role, text) {
     div.innerHTML = `<div class="bubble">${text.replace(/\n/g,'<br>')}</div><div class="msg-time">${timeStr}</div>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
+    if (typeof onDone === 'function') onDone();
   }
 }
 
@@ -3226,8 +3376,10 @@ function seedFigmaChatDemo() {
 function addThinking() {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
-  div.id = 'thinking'; div.className = 'thinking';
-  div.innerHTML = `<div class="thinking-text">思考中<span class="dots"><span>.</span><span>.</span><span>.</span></span></div>`;
+  div.id = 'thinking';
+  div.className = 'thinking';
+  div.setAttribute('aria-label', '夜屿正在思考');
+  div.innerHTML = `<div class="bubble bubble--thinking" aria-hidden="true"><span class="thinking-dot"></span><span class="thinking-dot"></span><span class="thinking-dot"></span></div>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
   isThinking = true;
@@ -3274,8 +3426,8 @@ function addOptionBtns(options, handler, label) {
 function addTransition(text) {
   const msgs = document.getElementById('messages');
   const div = document.createElement('div');
-  div.style.cssText = 'text-align:center;padding:4px 0 8px;animation:msgIn 0.3s ease';
-  div.innerHTML = `<span style="font-size:12px;color:rgba(148,163,184,0.5);letter-spacing:0.06em" role="status">${text}</span>`;
+  div.className = 'msg-transition';
+  div.innerHTML = `<span role="status">${text}</span>`;
   msgs.appendChild(div);
   msgs.scrollTop = msgs.scrollHeight;
 }
