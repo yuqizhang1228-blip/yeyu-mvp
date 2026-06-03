@@ -10,6 +10,8 @@ final class MemoryCard {
     var reframe: String
     var actions: String
     var createdAt: Date
+    /// 用户主动标记完成（YUQ-36）；SwiftData 轻量迁移，默认 false
+    var isCompleted: Bool = false
 
     init(
         id: UUID = UUID(),
@@ -18,7 +20,8 @@ final class MemoryCard {
         thought: String,
         reframe: String,
         actions: String,
-        createdAt: Date = .now
+        createdAt: Date = .now,
+        isCompleted: Bool = false
     ) {
         self.id = id
         self.sessionId = sessionId
@@ -27,6 +30,7 @@ final class MemoryCard {
         self.reframe = reframe
         self.actions = actions
         self.createdAt = createdAt
+        self.isCompleted = isCompleted
     }
 
     var displayActions: [String] {

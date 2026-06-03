@@ -5,6 +5,7 @@ struct MemoryCardDetailSheet: View {
     let onResumeChat: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         NavigationStack {
@@ -30,9 +31,28 @@ struct MemoryCardDetailSheet: View {
                         }
                     }
 
+                    // ── 标记完成 / 撤销 ──────────────────────
+                    Button {
+                        withAnimation { card.isCompleted.toggle() }
+                        try? modelContext.save()
+                    } label: {
+                        Label(
+                            card.isCompleted ? "撤销完成" : "标记完成",
+                            systemImage: card.isCompleted ? "arrow.uturn.backward" : "checkmark.circle"
+                        )
+                        .font(YeyuTypography.callout.weight(.semibold))
+                        .foregroundStyle(card.isCompleted ? YeyuColor.textTertiary : YeyuColor.primary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, YeyuSpacing.md)
+                        .background(
+                            RoundedRectangle(cornerRadius: YeyuRadius.lg)
+                                .fill(card.isCompleted ? YeyuColor.backgroundSurface : YeyuColor.primaryMuted)
+                        )
+                    }
+
                     Button(action: onResumeChat) {
                         Text("回到这场对话")
-                            .font(YeyuTypography.callout.weight(.semibold))
+                            .font(YeyuTypography.callout)
                             .foregroundStyle(YeyuColor.primary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, YeyuSpacing.md)
