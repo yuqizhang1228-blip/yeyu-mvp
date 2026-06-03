@@ -52,6 +52,7 @@ struct ChatView: View {
                         showCardSheet = true
                     }
                 }
+                chatComplianceFooter
                 inputBar
             }
 
@@ -161,6 +162,15 @@ struct ChatView: View {
         }
         .padding(.horizontal, YeyuSpacing.xl)
         .padding(.bottom, YeyuSpacing.sm)
+    }
+
+    private var chatComplianceFooter: some View {
+        Text("本功能无法代替医学等安全合规声明")
+            .font(YeyuTypography.caption)
+            .foregroundStyle(Color.white.opacity(0.3))
+            .frame(maxWidth: .infinity)
+            .multilineTextAlignment(.center)
+            .padding(.vertical, YeyuSpacing.xs)
     }
 
     private var inputBar: some View {
