@@ -26,6 +26,11 @@ final class AppState {
         showPersonalization = true
     }
 
+    /// 对话顶栏「+」：归档当前会话后回到首页（HomeView 即新对话入口）
+    func goHome() {
+        navigationPath = NavigationPath()
+    }
+
     /// 新建对话：替换当前 Chat 路由，避免栈里叠多层会话页
     func replaceChat(sessionId: UUID = UUID(), initialMessage: String? = nil) {
         if !navigationPath.isEmpty {

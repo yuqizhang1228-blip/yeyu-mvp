@@ -263,7 +263,7 @@ struct ChatView: View {
     private func startNewChat() async {
         guard !isLoading else { return }
         await archiveCurrentSessionIfNeeded()
-        appState.replaceChat()
+        appState.goHome()
     }
 
     private func archiveCurrentSessionIfNeeded() async {
