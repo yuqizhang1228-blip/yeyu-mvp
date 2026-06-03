@@ -1,20 +1,17 @@
 import SwiftUI
 
-/// 对话内三选一引导（YUQ-46）
+/// AI 引导选项卡（YUQ-52）
+/// 选项由 AI 输出的 <choices> 标签解析而来，不再写死。
 /// 设计稿：Figma `415:2362`（胶囊容器）
 struct ChoiceGuideView: View {
+    /// 由 ChoicesParser 解析的动态选项（最多 3 项）
+    let options: [String]
     let onSelect: (String) -> Void
-
-    private let options = [
-        "更像憋屈或委屈，堵在胸口",
-        "主要是焦虑，脑子停不下来",
-        "我说不清，想用自己的话说",
-    ]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 提示标签
-            Text("哪种更接近你现在的感受？")
+            Text("有几个方向，选一个？")
                 .font(YeyuTypography.footnote)
                 .foregroundStyle(Color.white.opacity(0.4))
                 .padding(.horizontal, YeyuSpacing.lg)
@@ -41,11 +38,6 @@ struct ChoiceGuideView: View {
                         }
                     }
                 }
-
-                // 自由输入提示（非按钮，提示用户也可直接在输入框说）
-                Text("或者其他你想说的？")
-                    .font(YeyuTypography.body)
-                    .foregroundStyle(Color.white.opacity(0.5))
             }
             .padding(.horizontal, YeyuSpacing.lg)
             .padding(.bottom, YeyuSpacing.lg)

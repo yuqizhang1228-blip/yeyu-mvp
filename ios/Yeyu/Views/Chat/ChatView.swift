@@ -19,7 +19,8 @@ struct ChatView: View {
     @State private var showCardSheet = false
     @State private var cardSheetReviewMode = false
     @State private var initialSent = false
-    @State private var showChoiceGuide = false
+    /// AI 输出 <choices> 标签时解析到此，驱动 ChoiceGuideView 显示
+    @State private var pendingChoices: [String]? = nil
     @State private var streamingText: String?
 
     private let api = ChatAPIClient()
@@ -40,8 +41,13 @@ struct ChatView: View {
                 chatHeader
                 messageList
                 if isLoading, streamingText == nil { typingIndicator }
-                // v1.1：三选一改为 AI 驱动（Prompt 输出 <choices> 标签后解析呈现）
-                // 当前机械时机（首轮后固定出现）体验不自然，暂时禁用
+                // AI 驱动的引导选项（YUQ-52）
+                if let choices = pendingChoices {
+                    ChoiceGuideView(options: choices) { option in
+                        pendingChoices = nil
+                        Task { await sendUserMessage(option) }
+                    }
+                }
                 if savedCard != nil {
                     CardBarView {
                         cardSheetReviewMode = true
@@ -173,9 +179,7 @@ struct ChatView: View {
                 Button {
                     let text = input
                     input = ""
-                    if userTurnCount >= 1 {
-                        completeChoiceGuide()
-                    }
+                    pendingChoices = nil
                     Task { await sendUserMessage(text) }
                 } label: {
                     Image(systemName: "arrow.up")
@@ -223,7 +227,6 @@ struct ChatView: View {
         if let existing = try? modelContext.fetch(descriptor).first {
             session = existing
             restoreSavedCardIfAny()
-            evaluateChoiceGuideVisibility()
             return
         }
         let newSession = ChatSession(id: sessionId)
@@ -285,7 +288,7 @@ struct ChatView: View {
         }
         try? modelContext.save()
 
-        showChoiceGuide = false
+        pendingChoices = nil
         await requestAssistantReply()
     }
 
@@ -336,11 +339,18 @@ struct ChatView: View {
                 throw ChatAPIError.emptyContent
             }
 
+            // AI 引导选项（YUQ-52）：先解析 choices，再解析卡片
+            if let choices = ChoicesParser.extract(from: reply) {
+                reply = ChoicesParser.strip(from: reply)
+                pendingChoices = choices
+            }
+
             if let parsed = CardParser.extract(from: reply) {
                 reply = parsed.displayText.isEmpty ? "我帮你整理了一张卡片，要保存吗？" : parsed.displayText
                 pendingCard = parsed.card
                 cardSheetReviewMode = false
                 showCardSheet = true
+                pendingChoices = nil  // 出卡时清除选项
             }
 
             let aiMsg = ChatMessage(role: .assistant, content: reply)
@@ -348,14 +358,12 @@ struct ChatView: View {
             session.messages.append(aiMsg)
             session.updatedAt = .now
             try? modelContext.save()
-
-            evaluateChoiceGuideVisibility()
         } catch {
             let errMsg = ChatMessage(role: .assistant, content: Self.networkErrorMessage)
             errMsg.session = session
             session.messages.append(errMsg)
             try? modelContext.save()
-            showChoiceGuide = false
+            pendingChoices = nil
         }
     }
 
@@ -390,21 +398,8 @@ struct ChatView: View {
         )
     }
 
-    private func evaluateChoiceGuideVisibility() {
-        guard let session else {
-            showChoiceGuide = false
-            return
-        }
-        if session.choiceGuideCompleted || userTurnCount != 1 || pendingCard != nil || showCardSheet {
-            showChoiceGuide = false
-            return
-        }
-        let assistantCount = sortedMessages.filter { $0.messageRole == .assistant }.count
-        showChoiceGuide = assistantCount == 1
-    }
-
     private func completeChoiceGuide() {
-        showChoiceGuide = false
+        pendingChoices = nil
         guard let session, !session.choiceGuideCompleted else { return }
         session.choiceGuideCompleted = true
         try? modelContext.save()
