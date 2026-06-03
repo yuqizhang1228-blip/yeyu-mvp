@@ -14,6 +14,8 @@ struct RootView: View {
                         HistoryView()
                     case .settings:
                         SettingsView()
+                    case .personalization:
+                        PersonalizationView()
                     }
                 }
         }
@@ -25,6 +27,7 @@ enum AppRoute: Hashable {
     case chat(sessionId: UUID, initialMessage: String?)
     case history
     case settings
+    case personalization
 }
 
 #Preview {

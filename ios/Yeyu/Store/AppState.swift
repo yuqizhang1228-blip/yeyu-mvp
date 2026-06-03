@@ -18,6 +18,10 @@ final class AppState {
         navigationPath.append(AppRoute.settings)
     }
 
+    func openPersonalization() {
+        navigationPath.append(AppRoute.personalization)
+    }
+
     /// 新建对话：替换当前 Chat 路由，避免栈里叠多层会话页
     func replaceChat(sessionId: UUID = UUID(), initialMessage: String? = nil) {
         if !navigationPath.isEmpty {

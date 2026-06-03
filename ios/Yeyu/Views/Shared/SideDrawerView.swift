@@ -44,6 +44,10 @@ struct SideDrawerView: View {
                 appState.drawerOpen = false
                 appState.openHistory()
             }
+            navRow(icon: "person.crop.circle", label: "个性化") {
+                appState.drawerOpen = false
+                appState.openPersonalization()
+            }
             navRow(icon: "gearshape", label: "设置") {
                 appState.drawerOpen = false
                 appState.openSettings()
