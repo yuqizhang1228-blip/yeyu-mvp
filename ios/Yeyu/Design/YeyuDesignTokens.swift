@@ -38,10 +38,25 @@ enum YeyuColor {
     static let borderPromptCard = Color.white.opacity(0.10)
     /// 输入大框描边（玻璃框）
     static let borderInput0515 = Color.white.opacity(1.0)
+    /// 输入大框玻璃底 · linear-gradient(93°, white10 → white08)（411:2006）
+    static let inputGlassTop = Color.white.opacity(0.10)
+    static let inputGlassBottom = Color.white.opacity(0.08)
+    /// 输入框占位文案 60% 白（411:2007）
+    static let textPlaceholder0515 = Color.white.opacity(0.60)
     /// 合规/辅助 · 10px 30% 白
     static let textCompliance = Color.white.opacity(0.30)
     /// 0515 主文案 80% 白
     static let textOnDarkSecondary = Color.white.opacity(0.80)
+
+    // MARK: 首页输入框内 icon（0515 · 411:2008 / 411:2013）
+    /// 模型 icon 圆底 · white 10%
+    static let iconModelBackground = Color.white.opacity(0.10)
+    /// 模型 icon「+」描线 · #D9D9D9
+    static let iconModelGlyph = Color(hex: 0xD9D9D9)
+    /// 语音 icon 圆底 · #F9F9F9
+    static let iconVoiceBackground = Color(hex: 0xF9F9F9)
+    /// 语音 icon 波形/箭头 · #212121
+    static let iconVoiceGlyph = Color(hex: 0x212121)
 
     // MARK: Sheet / 卡片弹窗（0515 · 394:2232）
     /// 出卡弹窗底板 `#2C2C2C`
@@ -89,5 +104,36 @@ extension Color {
         let g = Double((hex >> 8) & 0xFF) / 255
         let b = Double(hex & 0xFF) / 255
         self.init(.sRGB, red: r, green: g, blue: b, opacity: alpha)
+    }
+}
+
+/// 夜屿液态玻璃材质封装
+/// - **iOS 26+**：系统 **Liquid Glass**（`.glassEffect`），自动适配「降低透明度 / 减弱动效」等无障碍设置。
+/// - **iOS 17–25**：回退到手绘玻璃（白渐变底 + 1px 描边），与 0515 稿一致。
+///
+/// 约束：玻璃不可叠玻璃；玻璃容器内的小控件用纯色/淡色圆底，勿再套 `glassEffect`。
+extension View {
+    @ViewBuilder
+    func yeyuGlass(cornerRadius: CGFloat, interactive: Bool = false) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(
+                interactive ? .regular.interactive() : .regular,
+                in: RoundedRectangle(cornerRadius: cornerRadius)
+            )
+        } else {
+            self
+                .background(
+                    LinearGradient(
+                        colors: [YeyuColor.inputGlassTop, YeyuColor.inputGlassBottom],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    ),
+                    in: RoundedRectangle(cornerRadius: cornerRadius)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                )
+        }
     }
 }
