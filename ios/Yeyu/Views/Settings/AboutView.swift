@@ -1,10 +1,12 @@
 import SwiftUI
 
-/// 关于夜屿（YUQ-38）
+/// 关于夜屿（YUQ-38）— 大弹窗呈现
 struct AboutView: View {
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        ZStack {
-            YeyuColor.backgroundBase.ignoresSafeArea()
+        VStack(spacing: 0) {
+            sheetHeader
             ScrollView {
                 VStack(alignment: .leading, spacing: YeyuSpacing.xxl) {
 
@@ -23,10 +25,10 @@ struct AboutView: View {
                         .lineSpacing(6)
 
                     VStack(alignment: .leading, spacing: YeyuSpacing.md) {
-                        principleRow(icon: "bubble.left", text: "深夜树洞，认真倾听")
+                        principleRow(icon: "bubble.left",        text: "深夜树洞，认真倾听")
                         principleRow(icon: "arrow.triangle.branch", text: "结构化情绪梳理，不是无边界倾诉")
-                        principleRow(icon: "checkmark.circle", text: "可执行的微行动，而非空洞建议")
-                        principleRow(icon: "heart", text: "不替代专业咨询，但真诚陪伴")
+                        principleRow(icon: "checkmark.circle",   text: "可执行的微行动，而非空洞建议")
+                        principleRow(icon: "heart",              text: "不替代专业咨询，但真诚陪伴")
                     }
 
                     Divider().overlay(YeyuColor.borderDefault)
@@ -36,7 +38,7 @@ struct AboutView: View {
                             .font(YeyuTypography.footnote.weight(.medium))
                             .foregroundStyle(YeyuColor.textTertiary)
                         Link("400-161-9995（24 小时）",
-                             destination: URL(string: "tel:4001619995")!)
+                             destination: URL(string: CrisisGuard.hotlineURL)!)
                             .font(YeyuTypography.footnote)
                             .foregroundStyle(YeyuColor.primary)
                     }
@@ -49,8 +51,36 @@ struct AboutView: View {
                 .padding(YeyuSpacing.xl)
             }
         }
-        .navigationTitle("关于夜屿")
-        .navigationBarTitleDisplayMode(.inline)
+        .background(sheetBg)
+        .presentationDetents([.large])
+        .presentationCornerRadius(24)
+        .presentationDragIndicator(.visible)
+    }
+
+    private var sheetHeader: some View {
+        HStack {
+            Button { dismiss() } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.white)
+                    .frame(width: 32, height: 32)
+            }
+            Spacer()
+            Text("关于夜屿")
+                .font(.system(size: 18))
+                .foregroundStyle(.white)
+            Spacer()
+            Color.clear.frame(width: 32, height: 32)
+        }
+        .padding(.horizontal, YeyuSpacing.xl)
+        .padding(.vertical, 15)
+    }
+
+    private var sheetBg: some View {
+        Color(hex: 0x161616, alpha: 0.92)
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .ignoresSafeArea()
     }
 
     private func principleRow(icon: String, text: String) -> some View {
@@ -67,6 +97,4 @@ struct AboutView: View {
     }
 }
 
-#Preview {
-    NavigationStack { AboutView() }
-}
+#Preview { AboutView() }

@@ -5,6 +5,10 @@ final class AppState {
     var navigationPath = NavigationPath()
     var drawerOpen = false
     var showCrisisSheet = false
+    /// 设置页作为 sheet 呈现（不进导航栈）
+    var showSettings = false
+    /// 个性化页作为 sheet 呈现
+    var showPersonalization = false
 
     func openChat(sessionId: UUID = UUID(), initialMessage: String? = nil) {
         navigationPath.append(AppRoute.chat(sessionId: sessionId, initialMessage: initialMessage))
@@ -15,11 +19,11 @@ final class AppState {
     }
 
     func openSettings() {
-        navigationPath.append(AppRoute.settings)
+        showSettings = true
     }
 
     func openPersonalization() {
-        navigationPath.append(AppRoute.personalization)
+        showPersonalization = true
     }
 
     /// 新建对话：替换当前 Chat 路由，避免栈里叠多层会话页
