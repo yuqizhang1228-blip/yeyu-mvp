@@ -37,7 +37,7 @@ Linear 项目：[夜屿 UI UX 精益设计](https://linear.app/yuqi-design/proje
 |-------|------|---------------------------|---------------------|-----|----------|
 | [YUQ-27](https://linear.app/yuqi-design/issue/YUQ-27) | In Progress | [page/home `411:1996`](https://www.figma.com/design/cGFZXtYVmzWIQ7XqybecGP/0515?node-id=411-1996) | `17:311` | `HomeView` | 功能 ✅；对照 **411:1996** 做 Token/像素 diff |
 | [YUQ-28](https://linear.app/yuqi-design/issue/YUQ-28) | Done | （附件无单独帧；见 27 首页内光球） | `702:862` 组件 | 首页光球 | Done 设计；实现待跟 0515 |
-| [YUQ-29](https://linear.app/yuqi-design/issue/YUQ-29) | Done | 母版见 32 | `20:64` | `ChatView` | 已被 YUQ-32 取代 |
+| [YUQ-29](https://linear.app/yuqi-design/issue/YUQ-29) | Done | 母版见 32 | `20:64` | `ChatView` / H5 | 聊天流 UI/UX 已实现（思考气泡 / `<choices>` 解析 / 错误气泡 / transition 样式）；流式/思考条 v1.1 见 YUQ-32 |
 | [YUQ-30](https://linear.app/yuqi-design/issue/YUQ-30) | In Progress | [左侧弹窗 `226:2399`](https://www.figma.com/design/cGFZXtYVmzWIQ7XqybecGP/0515?node-id=226-2399)（**仅视觉**） | `4:121` | `SideDrawerView` | 功能 ✅ 范围见 [`ios/DRAWER_SCOPE.md`](../../ios/DRAWER_SCOPE.md) |
 | [YUQ-32](https://linear.app/yuqi-design/issue/YUQ-32) | In Progress | [page chat `226:2460`](https://www.figma.com/design/cGFZXtYVmzWIQ7XqybecGP/0515?node-id=226-2460) | `20:64` | `ChatView` | 流式/思考条 v1.1 |
 | [YUQ-33](https://linear.app/yuqi-design/issue/YUQ-33) | Todo | [page chat check `415:2362`](https://www.figma.com/design/cGFZXtYVmzWIQ7XqybecGP/0515?node-id=415-2362) | `27:123` | `ChoiceGuideView` | 功能 ✅ |
