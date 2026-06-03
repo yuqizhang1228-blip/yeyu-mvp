@@ -40,19 +40,15 @@ struct ChatView: View {
                 chatHeader
                 messageList
                 if isLoading, streamingText == nil { typingIndicator }
-                if showChoiceGuide {
-                    ChoiceGuideView { option in
-                        completeChoiceGuide()
-                        Task { await sendUserMessage(option) }
-                    }
-                }
+                // v1.1：三选一改为 AI 驱动（Prompt 输出 <choices> 标签后解析呈现）
+                // 当前机械时机（首轮后固定出现）体验不自然，暂时禁用
                 if savedCard != nil {
                     CardBarView {
                         cardSheetReviewMode = true
                         showCardSheet = true
                     }
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
-                chatComplianceFooter
                 inputBar
             }
 
@@ -162,15 +158,6 @@ struct ChatView: View {
         }
         .padding(.horizontal, YeyuSpacing.xl)
         .padding(.bottom, YeyuSpacing.sm)
-    }
-
-    private var chatComplianceFooter: some View {
-        Text("本功能无法代替医学等安全合规声明")
-            .font(YeyuTypography.caption)
-            .foregroundStyle(Color.white.opacity(0.3))
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-            .padding(.vertical, YeyuSpacing.xs)
     }
 
     private var inputBar: some View {

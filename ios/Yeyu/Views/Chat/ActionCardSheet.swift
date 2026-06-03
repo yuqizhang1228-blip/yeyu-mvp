@@ -10,6 +10,7 @@ struct ActionCardSheet: View {
     let onContinue: () -> Void
 
     @Environment(\.dismiss) private var dismiss
+    @State private var isSaving = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -84,10 +85,16 @@ struct ActionCardSheet: View {
                             .overlay(Capsule().stroke(Color.white.opacity(0.9), lineWidth: 1))
                     }
 
-                    // 保存卡片：实心
+                    // 保存卡片：实心，带收缩到左上角动画
                     Button {
-                        onSave()
-                        dismiss()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                            isSaving = true
+                        }
+                        Task {
+                            try? await Task.sleep(for: .milliseconds(320))
+                            onSave()
+                            dismiss()
+                        }
                     } label: {
                         Text("保存卡片")
                             .font(YeyuTypography.callout.weight(.medium))
@@ -102,6 +109,9 @@ struct ActionCardSheet: View {
                 .padding(.bottom, YeyuSpacing.xxl)
             }
         }
+        .scaleEffect(isSaving ? 0.05 : 1, anchor: .topLeading)
+        .offset(x: isSaving ? -20 : 0, y: isSaving ? -60 : 0)
+        .opacity(isSaving ? 0 : 1)
         .background(YeyuColor.backgroundSheet)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)

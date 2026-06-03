@@ -28,7 +28,6 @@ struct HomeView: View {
                         greeting
                         chipSection
                         inputSection
-                        homeComplianceFooter
                     }
                     .padding(.horizontal, YeyuSpacing.xl)
                     .padding(.bottom, YeyuSpacing.xxxl)
@@ -133,15 +132,6 @@ struct HomeView: View {
                 }
             }
         }
-    }
-
-    private var homeComplianceFooter: some View {
-        Text("本功能无法代替医学等安全合规声明")
-            .font(YeyuTypography.caption)
-            .foregroundStyle(YeyuColor.textCompliance)
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
-            .padding(.top, YeyuSpacing.md)
     }
 
     private var inputSection: some View {
