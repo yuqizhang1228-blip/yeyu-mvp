@@ -14,7 +14,7 @@ struct CrisisSheetView: View {
                     .font(YeyuTypography.body)
                     .foregroundStyle(YeyuColor.textSecondary)
 
-                Link(destination: URL(string: "tel://\(CrisisGuard.hotline)")!) {
+                Link(destination: URL(string: CrisisGuard.hotlineURL)!) {
                     Text("拨打 \(CrisisGuard.hotline)")
                         .font(YeyuTypography.callout.weight(.semibold))
                         .foregroundStyle(YeyuColor.textInverse)

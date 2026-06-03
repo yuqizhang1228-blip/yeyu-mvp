@@ -2,6 +2,8 @@ import Foundation
 
 enum CrisisGuard {
     static let hotline = "400-161-9995"
+    /// iOS tel: URL — 不含短横线，确保所有版本可拨号
+    static let hotlineURL = "tel:4001619995"
 
     private static let keywords = [
         "自杀", "想死", "不想活", "结束生命", "割腕", "跳楼", "吞药",

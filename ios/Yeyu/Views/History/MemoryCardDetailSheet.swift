@@ -14,12 +14,12 @@ struct MemoryCardDetailSheet: View {
                         .font(YeyuTypography.title)
                         .foregroundStyle(YeyuColor.textTitle)
 
-                    cardSection(title: "💭 原来的想法", body: card.thought)
-                    cardSection(title: "🌱 新的视角", body: card.reframe)
+                    cardSection(title: "你的心情", body: card.thought)
+                    cardSection(title: "换个角度", body: card.reframe)
 
                     if !card.displayActions.isEmpty {
                         VStack(alignment: .leading, spacing: YeyuSpacing.sm) {
-                            Text("🎯 这周试试")
+                            Text("明天可以试试")
                                 .font(YeyuTypography.footnote)
                                 .foregroundStyle(YeyuColor.textTertiary)
                             ForEach(card.displayActions, id: \.self) { item in

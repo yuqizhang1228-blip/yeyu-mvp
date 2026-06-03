@@ -439,9 +439,11 @@ struct ChatView: View {
         } else {
             actionsPayload = card.actions
         }
+        // title 取 thought 前 20 字，避免 AI 异步标题未落库时出现「新对话」占位
+        let cardTitle = String(card.thought.prefix(20))
         let memory = MemoryCard(
             sessionId: session.id,
-            title: session.title,
+            title: cardTitle.isEmpty ? "行动卡片" : cardTitle,
             thought: card.thought,
             reframe: card.reframe,
             actions: actionsPayload

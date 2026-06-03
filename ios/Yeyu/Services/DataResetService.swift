@@ -8,7 +8,7 @@ enum DataResetService {
         try deleteAll(MemoryCard.self, in: modelContext)
         try modelContext.save()
 
-        let keys = [YeyuUser.usernameKey, YeyuUser.uidKey]
+        let keys = [YeyuUser.usernameKey, YeyuUser.uidKey, "yeyu_auto_memory"]
         for key in keys {
             UserDefaults.standard.removeObject(forKey: key)
         }

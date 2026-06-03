@@ -23,14 +23,14 @@ struct HistoryView: View {
                                 Text(card.title)
                                     .font(YeyuTypography.callout.weight(.semibold))
                                     .foregroundStyle(YeyuColor.textTitle)
-                                Text("💭 \(card.thought)")
+                                Text(card.thought)
                                     .font(YeyuTypography.footnote)
                                     .foregroundStyle(YeyuColor.textSecondary)
                                     .lineLimit(2)
-                                Text("🌱 \(card.reframe)")
+                                Text(card.reframe)
                                     .font(YeyuTypography.footnote)
-                                    .foregroundStyle(YeyuColor.textSecondary)
-                                    .lineLimit(2)
+                                    .foregroundStyle(YeyuColor.textTertiary)
+                                    .lineLimit(1)
                             }
                         }
                         .listRowBackground(YeyuColor.backgroundSurface)

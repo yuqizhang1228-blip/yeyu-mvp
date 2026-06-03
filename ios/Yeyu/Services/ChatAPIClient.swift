@@ -3,8 +3,8 @@ import Foundation
 struct ChatAPIClient {
     /// 生产代理 — Key 仅在 Vercel 服务端（YUQ-42）
     var baseURL = URL(string: "https://yeyu-mvp.vercel.app/api/chat")!
-    /// v1.1：优先流式；失败时 ChatView 可回退非流式
-    var prefersStreaming = true
+    /// v1 使用整包响应；v1.1 改 true 开启 SSE 打字机效果（YUQ-47）
+    var prefersStreaming = false
 
     struct ChatRequest: Encodable {
         let model: String
