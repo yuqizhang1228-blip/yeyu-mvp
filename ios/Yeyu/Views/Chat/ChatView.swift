@@ -1,5 +1,8 @@
 import SwiftUI
 import SwiftData
+#if canImport(UIKit)
+import UIKit
+#endif
 
 struct ChatView: View {
     static let networkErrorMessage = "网络有点问题，稍后再试试。"
@@ -35,12 +38,17 @@ struct ChatView: View {
 
     var body: some View {
         ZStack(alignment: .leading) {
-            YeyuColor.backgroundBase.ignoresSafeArea()
+            // 对话页底：与首页同族的克制深色（0515），避免大面积纯蓝黑。
+            LinearGradient(
+                colors: [YeyuColor.background0515Top, YeyuColor.backgroundDrawer],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
             VStack(spacing: 0) {
                 chatHeader
                 messageList
-                if isLoading, streamingText == nil { typingIndicator }
                 // AI 驱动的引导选项（YUQ-52）
                 if let choices = pendingChoices {
                     ChoiceGuideView(options: choices) { option in
@@ -91,7 +99,7 @@ struct ChatView: View {
 
     private var chatHeader: some View {
         HStack {
-            Button { appState.drawerOpen = true } label: {
+            Button { appState.openDrawer() } label: {
                 VStack(alignment: .leading, spacing: 5) {
                     Rectangle().frame(width: 20, height: 1.5)
                     Rectangle().frame(width: 14, height: 1.5)
@@ -141,6 +149,11 @@ struct ChatView: View {
                         ChatBubbleView(role: .assistant, content: streamingText)
                             .id("streaming")
                     }
+                    // AI 思考步骤条（YUQ-35 · 226:2516/2568/2621）— 等待响应时的客户端动画
+                    if isLoading, streamingText == nil {
+                        ThinkingIndicator()
+                            .id("thinking")
+                    }
                 }
                 .padding(.horizontal, YeyuSpacing.xl)
                 .padding(.vertical, YeyuSpacing.lg)
@@ -151,61 +164,98 @@ struct ChatView: View {
             .onChange(of: streamingText) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
-        }
-    }
-
-    private var typingIndicator: some View {
-        HStack(spacing: YeyuSpacing.sm) {
-            ProgressView().tint(YeyuColor.primary)
-            Text("夜屿正在思考...")
-                .font(YeyuTypography.footnote)
-                .foregroundStyle(YeyuColor.textTertiary)
-            Spacer()
-        }
-        .padding(.horizontal, YeyuSpacing.xl)
-        .padding(.bottom, YeyuSpacing.sm)
-    }
-
-    private var inputBar: some View {
-        VStack(spacing: YeyuSpacing.xs) {
-            HStack(spacing: YeyuSpacing.sm) {
-                TextField(inputPlaceholder, text: $input, axis: .vertical)
-                    .lineLimit(1...4)
-                    .font(YeyuTypography.body)
-                    .foregroundStyle(YeyuColor.textSecondary)
-                    .padding(.horizontal, YeyuSpacing.lg)
-                    .padding(.vertical, YeyuSpacing.md)
-
-                Button {
-                    let text = input
-                    input = ""
-                    pendingChoices = nil
-                    Task { await sendUserMessage(text) }
-                } label: {
-                    Image(systemName: "arrow.up")
-                        .font(.system(size: 13, weight: .bold))
-                        .foregroundStyle(YeyuColor.textInverse)
-                        .frame(width: 39, height: 39)
-                        .background(YeyuColor.primary)
-                        .clipShape(Circle())
-                }
-                .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isLoading)
+            .onChange(of: isLoading) { _, _ in
+                scrollToBottom(proxy: proxy)
             }
-            .background(YeyuColor.backgroundInput)
-            .clipShape(Capsule())
-            .overlay(Capsule().stroke(YeyuColor.borderDefault, lineWidth: 1))
+        }
+    }
+
+    private var hasInput: Bool {
+        !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    /// 对话输入框 — 与首页统一的液态玻璃输入盒（Figma 414:2187）。
+    private var inputBar: some View {
+        VStack(spacing: YeyuSpacing.md) {
+            VStack(alignment: .leading, spacing: YeyuSpacing.lg) {
+                TextField(
+                    "",
+                    text: $input,
+                    prompt: Text(inputPlaceholder).foregroundStyle(YeyuColor.textPlaceholder0515),
+                    axis: .vertical
+                )
+                .lineLimit(1...4)
+                .font(YeyuTypography.body)
+                .foregroundStyle(.white)
+                .tint(YeyuColor.primary)
+                .submitLabel(.send)
+                .onSubmit(sendCurrentInput)
+                .frame(minHeight: 22, alignment: .topLeading)
+
+                HStack(spacing: 0) {
+                    modelIcon
+                    Spacer(minLength: YeyuSpacing.md)
+                    sendButton
+                }
+            }
+            .padding(YeyuSpacing.md)
+            .yeyuGlass(cornerRadius: YeyuRadius.promptCard, interactive: true)
             .padding(.horizontal, YeyuSpacing.xl)
 
-            Text("本功能无法代替专业心理咨询")
+            Text("本功能无法代替专业心理咨询或医学治疗")
                 .font(YeyuTypography.caption)
-                .foregroundStyle(YeyuColor.textTertiary)
+                .foregroundStyle(YeyuColor.textCompliance)
                 .padding(.bottom, YeyuSpacing.sm)
         }
         .padding(.top, YeyuSpacing.sm)
-        .background(YeyuColor.backgroundBase)
-        .overlay(alignment: .top) {
-            Rectangle().fill(YeyuColor.borderDefault).frame(height: 1)
+    }
+
+    /// 模型 icon（占位视觉，与首页一致；模型切换为非 P0）
+    private var modelIcon: some View {
+        ZStack {
+            Circle().fill(YeyuColor.iconModelBackground)
+            Image(systemName: "plus")
+                .font(.system(size: 14, weight: .regular))
+                .foregroundStyle(YeyuColor.iconModelGlyph)
         }
+        .frame(width: 31, height: 31)
+        .accessibilityHidden(true)
+    }
+
+    /// 语音/发送 — 有输入且非加载中切为发送箭头，否则语音占位。
+    private var sendButton: some View {
+        Button(action: sendCurrentInput) {
+            ZStack {
+                Circle().fill(YeyuColor.iconVoiceBackground)
+                Group {
+                    if hasInput {
+                        Image(systemName: "arrow.up")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(YeyuColor.iconVoiceGlyph)
+                            .transition(.scale.combined(with: .opacity))
+                    } else {
+                        VoiceWaveform(color: YeyuColor.iconVoiceGlyph)
+                            .transition(.scale.combined(with: .opacity))
+                    }
+                }
+            }
+            .frame(width: 31, height: 31)
+            .frame(width: 44, height: 44)
+            .contentShape(Rectangle())
+            .opacity(isLoading ? 0.4 : 1)
+        }
+        .disabled(!hasInput || isLoading)
+        .animation(.easeInOut(duration: 0.18), value: hasInput)
+        .accessibilityLabel(hasInput ? "发送" : "语音输入")
+        .padding(.trailing, -6.5)
+    }
+
+    private func sendCurrentInput() {
+        guard hasInput, !isLoading else { return }
+        let text = input
+        input = ""
+        pendingChoices = nil
+        Task { await sendUserMessage(text) }
     }
 
     private var sortedMessages: [ChatMessage] {
@@ -305,6 +355,8 @@ struct ChatView: View {
         withAnimation {
             if streamingText != nil {
                 proxy.scrollTo("streaming", anchor: .bottom)
+            } else if isLoading {
+                proxy.scrollTo("thinking", anchor: .bottom)
             } else if let last = sortedMessages.last?.id {
                 proxy.scrollTo(last, anchor: .bottom)
             }
@@ -352,6 +404,11 @@ struct ChatView: View {
                 showCardSheet = true
                 pendingChoices = nil  // 出卡时清除选项
             }
+
+            // AI 回吐信息时振动一次（YUQ-32 #6）
+            #if canImport(UIKit)
+            UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+            #endif
 
             let aiMsg = ChatMessage(role: .assistant, content: reply)
             aiMsg.session = session
@@ -435,6 +492,74 @@ struct ChatView: View {
         savedCard = card
         pendingCard = nil
         UserProfileService.recordCardTopic(thought: card.thought)
+    }
+}
+
+/// AI 思考步骤条（YUQ-35 · 226:2516/2568/2621）
+/// 等待响应时的纯客户端动画：山形 icon + 三步文案渐变切换 + 文字微光扫过。
+/// 不依赖后端 SSE；真流式打字机归 YUQ-47。
+private struct ThinkingIndicator: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let steps = ["AI 正在理解问题...", "AI 正在梳理思绪...", "AI 正在整理表达..."]
+    @State private var step = 0
+    @State private var shimmerX: CGFloat = -120
+
+    var body: some View {
+        HStack(spacing: YeyuSpacing.sm) {
+            Image(systemName: "mountain.2.fill")
+                .font(.system(size: 12))
+                .foregroundStyle(Color.white.opacity(0.8))
+
+            label
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .task { await cycleSteps() }
+        .onAppear { startShimmer() }
+    }
+
+    private var label: some View {
+        let text = steps[step]
+        return Text(text)
+            .font(.system(size: 12))
+            .tracking(0.96)
+            .foregroundStyle(Color.white.opacity(reduceMotion ? 0.8 : 0.45))
+            .overlay {
+                if !reduceMotion {
+                    Text(text)
+                        .font(.system(size: 12))
+                        .tracking(0.96)
+                        .foregroundStyle(.white)
+                        .mask(
+                            LinearGradient(
+                                colors: [.clear, .white, .clear],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                            .frame(width: 64)
+                            .offset(x: shimmerX)
+                        )
+                }
+            }
+            .id(step)
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.45), value: step)
+    }
+
+    private func startShimmer() {
+        guard !reduceMotion else { return }
+        shimmerX = -120
+        withAnimation(.easeInOut(duration: 1.3).repeatForever(autoreverses: false)) {
+            shimmerX = 140
+        }
+    }
+
+    private func cycleSteps() async {
+        guard !reduceMotion else { return }
+        while step < steps.count - 1 {
+            try? await Task.sleep(nanoseconds: 1_400_000_000)
+            if Task.isCancelled { return }
+            withAnimation(.easeInOut(duration: 0.45)) { step = min(step + 1, steps.count - 1) }
+        }
     }
 }
 
