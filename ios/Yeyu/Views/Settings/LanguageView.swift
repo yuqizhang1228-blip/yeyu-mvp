@@ -8,8 +8,12 @@ struct LanguageView: View {
         VStack(spacing: 0) {
             sheetHeader
             VStack(alignment: .leading, spacing: 0) {
-                languageRow(name: "简体中文", isSelected: true, available: true)
-                Divider().background(Color.white.opacity(0.05)).padding(.horizontal, YeyuSpacing.xl)
+                // 选项列表对齐设计稿 226:2269（中文–简 / 中文–繁 / English）；
+                // v1 仅简体可用，其余诚实置为「即将推出」，不做非功能切换。
+                languageRow(name: "中文–简", isSelected: true, available: true)
+                rowDivider
+                languageRow(name: "中文–繁", isSelected: false, available: false)
+                rowDivider
                 languageRow(name: "English", isSelected: false, available: false)
             }
             .padding(.top, YeyuSpacing.md)
@@ -43,6 +47,10 @@ struct LanguageView: View {
         }
         .padding(.horizontal, YeyuSpacing.xl)
         .padding(.vertical, 15)
+    }
+
+    private var rowDivider: some View {
+        Divider().background(Color.white.opacity(0.05)).padding(.horizontal, YeyuSpacing.xl)
     }
 
     private var sheetBg: some View {
