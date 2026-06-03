@@ -5,7 +5,8 @@
 
 **技能路径**：`~/.cursor/skills/ui-ux-pro-max/`  
 **检索命令范式**：`python3 "$HOME/.cursor/skills/ui-ux-pro-max/scripts/search.py" "<query>" --domain <ux|product|style|color|web> ...`  
-**栈补充**：`--stack html-tailwind`（技能默认栈；本项目映射为 **手写 CSS + 语义 HTML**，不引入 Tailwind 运行时）。
+**栈补充**：`--stack html-tailwind`（技能默认栈；本项目映射为 **手写 CSS + 语义 HTML**，不引入 Tailwind 运行时）。  
+**iOS 映射**：`ios/Yeyu/Design/YeyuDesignTokens.swift`（P0 默认色 + **0515 预留语义**）；**P0 不做 Figma 像素级还原**，收口见 `ios/VISUAL_ROADMAP.md`。
 
 ---
 
@@ -117,8 +118,16 @@
 
 1. 运行 `search.py` 拉取与本页相关的 `ux` + `web` 行。  
 2. 将结论追加到 `design-system/夜屿-night-isle/pages/<page>.md`（若存在则 **覆盖** Master 对应条）。  
-3. 再改 `index.html`，并在 page 文件里写 **检索命令 + 日期**。
+3. **H5**：改 `index.html`，并在 page 文件里写 **检索命令 + 日期**。  
+4. **iOS**：只改 `YeyuDesignTokens` / 对应 `Views/`；新 Token 须能在 MASTER 找到依据。  
+5. **Figma 改版**：先更新 [`FIGMA_LINEAR_SYNC.md`](./FIGMA_LINEAR_SYNC.md) 中 node ↔ Linear ↔ 代码，再动 Token 或像素。
 
 ---
 
-*最后更新：2026-03-28 — 与自动生成的浅色 MASTER 冲突部分已按第 2 节裁决替换。*
+## 7. Figma / Linear 对照
+
+改版或验收设计稿时，以 **[FIGMA_LINEAR_SYNC.md](./FIGMA_LINEAR_SYNC.md)** 为 Issue ↔ node ↔ `ios/` / `index.html` 单一登记表；勿只改 Figma 不更新该表。
+
+---
+
+*最后更新：2026-06-02 — 补充 iOS Token 映射与 v1 视觉边界。*

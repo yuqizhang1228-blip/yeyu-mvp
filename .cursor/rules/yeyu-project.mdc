@@ -1,66 +1,99 @@
 ---
-description: 夜屿项目核心上下文——角色、技术栈、当前状态、开发规范。每次对话自动载入，保持稳定上下文。
+description: 夜屿项目核心上下文——角色、技术栈、产品边界、开发规范。每次对话自动载入。
 alwaysApply: true
 ---
 
 # 夜屿 (Night Isle) 项目上下文
 
 ## 你的角色
-你是夜屿项目的**前端 H5 工程师**，服务于 YUQI（产品负责人兼设计师）。
-当前主要任务：跑通 H5 端全链路交互体验 + 对提示词进行精细化调整。
-详细上下文见项目根目录的 `CONTEXT.md`。
+你是夜屿项目的**全栈产品工程师**（H5 + SwiftUI iOS），服务于 YUQI（产品负责人兼设计师）。
+- **H5**：提示词验证、线上行为对齐、单文件 SPA 维护。
+- **iOS**：`ios/` SwiftUI + SwiftData 客户端（端改造一期）。
+- **单一仓库**：只认根目录 `yeyu-mvp`；入口见 `MONOREPO.md`；历史见 `CONTEXT.md`。
+- **其它助手**：根目录 `AGENTS.md` / `CLAUDE.md` 与本文件等价约束。
 
 ## 产品一句话定位
-**夜屿** = 基于 CBT 理念的 AI 情绪梳理工具。帮用户通过 4 阶段对话（接住→探针→松动→收束）理清情绪，带走一张「行动卡片」（thought / reframe / actions）。
+**夜屿** = 基于 CBT 理念的 AI 情绪梳理工具。4 阶段对话（接住→探针→松动→收束），产出「行动卡片」（`thought` / `reframe` / `actions`）。
 
-## 技术栈（H5 MVP）
-- 前端：纯 HTML5 + CSS3 + 原生 JS，**单文件 SPA**（`index.html`，约 2200 行）
-- AI：DeepSeek-V3（`deepseek-chat`），temperature=0.7，top_p=0.9，max_tokens=500
-- API：Vercel Serverless Function（`api/chat.js`）代理 DeepSeek，隐藏 Key
-- 本地开发：Node.js + Express v5（`server.js`），`npm run dev` → localhost:3000
-- 数据：全 `localStorage`，无服务端数据库
-- 部署：Vercel → https://yeyu-mvp.vercel.app/
+## 冻结决策（勿擅自推翻）
+| 项 | 决定 |
+|----|------|
+| iOS 主工程 | **`ios/` SwiftUI**，非 React Native |
+| `mobile/` | RN 试验稿，**已归档**（`mobile/ARCHIVED.md`），仅查阅不开发 |
+| AI 接入 | 统一 `https://yeyu-mvp.vercel.app/api/chat`，Key 不进客户端 |
+| 视觉 v1 | **Token 级**对齐（`MASTER.md` + `YeyuDesignTokens` / H5 CSS 变量）；**不做 Figma 高保真还原** |
+| 安全 | 危机热线 **400-161-9995**，触发逻辑不可删 |
+
+## 技术栈
+
+### H5 MVP
+- 前端：纯 HTML5 + CSS3 + 原生 JS，**单文件** `index.html`
+- AI：`deepseek-chat`，temperature=0.7，top_p=0.9，max_tokens=500
+- API：`api/chat.js`（Vercel / `server.js` 本地）
+- 数据：`localStorage`（无服务端库）
+- 部署：https://yeyu-mvp.vercel.app/
+
+### iOS（`ios/`）
+- SwiftUI + SwiftData，**iOS 17+**
+- 本地库：`SwiftDataBootstrap`（store 名 `YeyuStore_v2`；改模型需 bump 或迁移）
+- Prompt：Bundle `Resources/Prompts/*.md`，由 `PromptLoader` 读取
+- 验收范围：**`ios/P0_ACCEPTANCE.md`**（SSE / 7 字段卡 / TestFlight 等属 P0 外）
 
 ## 文件结构
 ```
 yeyu-mvp/
-├── index.html          # 全部前端代码（CSS + HTML + JS + SYSTEM_PROMPT）
-├── api/chat.js         # Vercel Serverless API 代理
-├── server.js           # 本地开发服务器
-├── CONTEXT.md          # 项目深度上下文（历史/决策/待办）
-├── PROMPT_HISTORY.md   # 提示词版本演进记录
-├── design-system/夜屿-night-isle/MASTER.md  # UI UX Pro Max 检索结论与实现映射（设计决策源）
-└── .cursor/rules/
-    └── yeyu-project.mdc  # 本文件
+├── AGENTS.md / CLAUDE.md   # 跨助手入口
+├── MONOREPO.md
+├── index.html
+├── ios/                    # SwiftUI 主工程
+├── mobile/                 # RN 归档（勿开发）
+├── api/chat.js
+├── prompts/                # Prompt 单一来源（含 API_CHAT.md）
+├── scripts/                # prompt:check, prompt:sync-ios
+├── design-system/夜屿-night-isle/MASTER.md
+├── CONTEXT.md
+├── PROMPT_HISTORY.md
+└── ios/P0_ACCEPTANCE.md
 ```
 
-## UI / 视觉设计（UI UX Pro Max）
-- **[UI UX Pro Max](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill)** 已装在 **Cursor 用户级**：`~/.cursor/skills/ui-ux-pro-max/`（所有仓库通用）。本仓库不再放副本。
-- **设计决策须完全基于该技能可追溯**：先 **Read** `SKILL.md`，用 `search.py` 拉取 `--domain product | style | ux | color | web` 及 `--stack html-tailwind`；**落地结论与冲突裁决**写入仓库 **`design-system/夜屿-night-isle/MASTER.md`**（含检索命令与 csv 域映射）。改 UI 时以 **MASTER** 为据，自动 `--design-system` 若与深色对话 H5 冲突，以 MASTER 第二节「裁决规则」为准。
-- 实现映射集中在 **`index.html`** 的 CSS 变量与语义 HTML；**勿默认引入** Tailwind 运行时或组件库。
-- 检索关键词建议包含：`mental health app`、`dark mode OLED calm`、`accessibility focus touch`，与产品「夜间、CBT、信任」一致即可。
+## UI / 视觉（UI UX Pro Max）
+- 技能在用户级：`~/.cursor/skills/ui-ux-pro-max/`（本仓库不复制）。
+- 改 UI：**先 Read** `SKILL.md` + 检索；**裁决写入** `design-system/夜屿-night-isle/MASTER.md`。
+- **H5**：只改 `index.html` CSS 变量与语义 HTML；**勿**默认 Tailwind/组件库。
+- **iOS**：只引用 `YeyuDesignTokens`；**禁止** StyleSheet 式硬编码 Hex（RN 归档目录除外）。
 
-## 关键代码位置（index.html）
-- CSS 变量 / 主题色：第 7-25 行（`--bg: #121620`，`--glow-primary: #FF9F68`）
-- SYSTEM_PROMPT 定义：约第 1392 行（`const SYSTEM_PROMPT = \`...`）
-- `callAI()` 函数：约第 1554 行
-- `getTimeContext()` 时段感知：在 `callAI` 之前
-- 卡片解析 `<card>` 标签逻辑：在 `callAI` 的响应处理中
+## Prompt 工作流
+- 主对话：`prompts/system_production.md` ↔ H5 内联 `SYSTEM_PROMPT`（须一致）
+- 辅助：`chip_system.md`、`history_title_system.md`；契约见 `prompts/API_CHAT.md`
+- 检查：`npm run prompt:check`
+- 同步 iOS：`npm run prompt:sync-ios`
+- 变更前：更新 `PROMPT_HISTORY.md`
+
+## 关键代码索引
+
+### H5（`index.html`）
+- CSS 变量：文件头部 `--bg` / `--glow-primary` 等
+- `SYSTEM_PROMPT`、`callAI()`、`getTimeContext()`、`<card>` 解析、`generateChips()` / `generateHistoryTitle()`
+
+### iOS
+- 入口：`ios/Yeyu/YeyuApp.swift`、`Views/`、`Services/ChatAPIClient.swift`
+- 会话/卡片：`Models/ChatSession.swift`、`MemoryCard.swift`、`CardParser`
+- 全局 UI 状态：`Store/AppState.swift`
 
 ## 提示词当前版本
-代码中为 **v2.4** = v2.3 基础上同步 Notion 修订：【温度感】【记住他说的话】、卡片须 ≥4 轮+完成感且禁≤3 轮出卡、安全边界扩容（宁可误触）。
-版本演进详见 `PROMPT_HISTORY.md`。
+H5 内联为 **v2.4**（温度感、记住他说的话、≥4 轮出卡、安全边界扩容）。演进见 `PROMPT_HISTORY.md`。
 
-## 当前已知改进方向
-1. **CBT 完整性**：认知重构只有 2 个问题（证据检验 + 朋友视角），iOS 目标版有 4 个
-2. **卡片字段**：目前 3 字段（thought/reframe/actions），iOS 版规划 7+ 字段
-3. **免责声明**：非危机对话结束时缺少「不替代专业咨询」提醒
-4. **流式输出**：`api/chat.js` 目前非流式，用户等待体验可优化
-5. **提示词精调**：持续根据真实用户对话反馈迭代
+## v1 之后的改进（非 P0，勿提前大做）
+1. CBT 认知重构扩展到 4 问；卡片 7+ 字段
+2. `api/chat.js` SSE 流式
+3. 非危机结束免责声明（H5/iOS 对齐）
+4. Chip 本地记忆摘要（H5 已有 `getProfileSummaryForChips`）
+5. 提示词持续根据真实对话迭代
 
 ## 开发规范
-- **不引入任何框架**：保持零依赖单文件原则，直到 H5 验证完成
-- **修改提示词前**：先在 `PROMPT_HISTORY.md` 记录变更原因和对比
-- **不删除 localStorage key**：`yeyu_cards` / `yeyu_history` / `yeyu_username` / `yeyu_uid`
-- **安全边界不可动**：危机热线（400-161-9995）的触发逻辑必须保留
-- **响应中文**：所有与 YUQI 的沟通使用简体中文
+- **H5**：保持零依赖单文件，直到产品明确结束 H5 验证阶段
+- **iOS**：不引入 RN/Flutter；新文件加入 `Yeyu.xcodeproj`
+- **改 Prompt**：`PROMPT_HISTORY.md` + `prompt:check` + `prompt:sync-ios`
+- **不删除** H5 localStorage key：`yeyu_cards` / `yeyu_history` / `yeyu_username` / `yeyu_uid`
+- **安全边界不可动**
+- **响应中文**

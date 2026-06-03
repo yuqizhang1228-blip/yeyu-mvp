@@ -23,11 +23,10 @@ function readJsonl(filePath) {
     .map((l) => JSON.parse(l));
 }
 
-function extractSystemPromptFromIndexHtml(indexHtmlPath) {
-  const html = fs.readFileSync(indexHtmlPath, "utf8");
-  const m = html.match(/const SYSTEM_PROMPT = `([\s\S]*?)`;\s*/);
-  if (!m) throw new Error("未在 index.html 中找到 const SYSTEM_PROMPT = `...`;");
-  return m[1];
+function readSystemPrompt(promptPath) {
+  const text = fs.readFileSync(promptPath, "utf8").trim();
+  if (!text) throw new Error(`提示词文件为空: ${promptPath}`);
+  return text;
 }
 
 function toText(output) {
@@ -199,7 +198,7 @@ async function taskFn(input) {
   const apiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
   if (!apiKey) throw new Error("DEEPSEEK_API_KEY 未设置");
 
-  const systemPrompt = extractSystemPromptFromIndexHtml(path.join(__dirname, "..", "index.html"));
+  const systemPrompt = readSystemPrompt(path.join(__dirname, "..", "prompts", "system_production.md"));
   const timeInfo = "【当前时间】现在是深夜（适合更轻更静的语气，行动建议避免打电话）";
 
   const userTurns = Array.isArray(input?.thread)
@@ -328,7 +327,7 @@ async function main() {
     ],
     metadata: {
       model: "deepseek-chat",
-      prompt_source: "index.html SYSTEM_PROMPT",
+      prompt_source: "prompts/system_production.md",
       dataset: path.basename(datasetPath),
     },
   });

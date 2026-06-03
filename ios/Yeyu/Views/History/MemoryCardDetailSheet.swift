@@ -1,0 +1,70 @@
+import SwiftUI
+
+struct MemoryCardDetailSheet: View {
+    let card: MemoryCard
+    let onResumeChat: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: YeyuSpacing.lg) {
+                    Text(card.title)
+                        .font(YeyuTypography.title)
+                        .foregroundStyle(YeyuColor.textTitle)
+
+                    cardSection(title: "💭 原来的想法", body: card.thought)
+                    cardSection(title: "🌱 新的视角", body: card.reframe)
+
+                    if !card.displayActions.isEmpty {
+                        VStack(alignment: .leading, spacing: YeyuSpacing.sm) {
+                            Text("🎯 这周试试")
+                                .font(YeyuTypography.footnote)
+                                .foregroundStyle(YeyuColor.textTertiary)
+                            ForEach(card.displayActions, id: \.self) { item in
+                                Text("· \(item)")
+                                    .font(YeyuTypography.body)
+                                    .foregroundStyle(YeyuColor.textSecondary)
+                            }
+                        }
+                    }
+
+                    Button(action: onResumeChat) {
+                        Text("回到这场对话")
+                            .font(YeyuTypography.callout.weight(.semibold))
+                            .foregroundStyle(YeyuColor.primary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, YeyuSpacing.md)
+                    }
+
+                    Button("关闭") { dismiss() }
+                        .font(YeyuTypography.footnote)
+                        .foregroundStyle(YeyuColor.textTertiary)
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(YeyuSpacing.xl)
+            }
+            .background(YeyuColor.backgroundBase)
+            .navigationTitle("行动卡片")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private func cardSection(title: String, body: String) -> some View {
+        VStack(alignment: .leading, spacing: YeyuSpacing.xs) {
+            Text(title)
+                .font(YeyuTypography.footnote)
+                .foregroundStyle(YeyuColor.textTertiary)
+            Text(body)
+                .font(YeyuTypography.body)
+                .foregroundStyle(YeyuColor.textPrimary)
+                .padding(YeyuSpacing.lg)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(YeyuColor.backgroundSurface)
+                .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
+        }
+    }
+}

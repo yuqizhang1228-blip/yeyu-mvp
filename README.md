@@ -20,12 +20,25 @@
 
 ---
 
+## 仓库结构（Monorepo）
+
+**只需维护本仓库**即可覆盖 H5 + iOS + API + Prompt 评测。详见 **[MONOREPO.md](./MONOREPO.md)**。  
+使用 AI 编码助手时请先读 **[AGENTS.md](./AGENTS.md)**（或 **[CLAUDE.md](./CLAUDE.md)**）。
+
+| 目录 | 说明 |
+|------|------|
+| `index.html` | H5 MVP（Vercel 线上） |
+| `ios/` | SwiftUI 原生 iOS App |
+| `mobile/` | RN 试验稿（已归档） |
+| `api/` | DeepSeek 代理（H5 / App 共用） |
+
 ## 技术栈
 
-- **前端**：纯 HTML/CSS/JS，单页面应用
+- **H5**：纯 HTML/CSS/JS，单页面应用
+- **iOS**：SwiftUI + SwiftData（`ios/`，iOS 17+）
 - **后端**：Vercel Serverless Function (`api/chat.js`) 代理 DeepSeek API
 - **AI 模型**：DeepSeek-V3
-- **部署**：Vercel
+- **部署**：H5 → Vercel；App → Xcode / TestFlight
 
 ---
 
@@ -74,12 +87,15 @@ npm run dev
 
 ```
 yeyu-mvp/
-├── index.html          # 前端主页面（含 SYSTEM_PROMPT）
-├── api/
-│   └── chat.js         # Vercel Serverless API 代理
-├── server.js           # 本地开发服务器
-├── package.json        # 项目配置
-└── README.md           # 本文件
+├── index.html          # H5 主页面（含 SYSTEM_PROMPT）
+├── ios/                # SwiftUI iOS App
+├── mobile/             # RN 归档（见 ARCHIVED.md）
+├── api/chat.js         # DeepSeek API 代理
+├── prompts/            # 提示词版本
+├── evals/              # Braintrust 评测
+├── server.js           # 本地 H5 开发服务器
+├── MONOREPO.md         # 单一入口说明（建议先读）
+└── README.md
 ```
 
 ---

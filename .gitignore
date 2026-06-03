@@ -1,6 +1,26 @@
 node_modules/
 .agents/
+
+# AI 工具内部配置（不入库）
+.claude/
+.kiro/
+skills/
+skills-lock.json
 .DS_Store
 .env
 .env.local
 .env.*.local
+
+# mobile/ (React Native — archived)
+mobile/node_modules/
+mobile/ios/Pods/
+mobile/ios/build/
+mobile/android/build/
+mobile/android/.gradle/
+mobile/.metro-health-check*
+
+# ios/ (SwiftUI)
+ios/build/
+ios/DerivedData/
+*.xcuserstate
+xcuserdata/

@@ -5,9 +5,13 @@
   "main": "server.js",
   "scripts": {
     "dev": "node server.js",
+    "dev:h5": "node server.js",
     "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "eval:yeyu": "node evals/yeyu_eval.js"
+    "prompt:check": "node scripts/check-prompt-sync.mjs",
+    "prompt:sync-ios": "node scripts/sync-ios-prompts.mjs",
+    "eval:yeyu": "node evals/yeyu_eval.js",
+    "ios:open": "open ios/Yeyu.xcodeproj"
   },
   "repository": {
     "type": "git",

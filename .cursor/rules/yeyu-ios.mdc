@@ -1,0 +1,42 @@
+---
+description: 仅编辑 ios/ 时加载的 SwiftUI 约束与 v1.1 能力说明
+globs: ios/**/*
+alwaysApply: false
+---
+
+# 夜屿 iOS 子规则
+
+全局规范仍以 `.cursor/rules/yeyu-project.mdc` 为准。本文件仅补充 **ios/** 相关约定。
+
+## 栈
+
+- SwiftUI + SwiftData（iOS 17+），主工程 `ios/Yeyu.xcodeproj`
+- API：`ChatAPIClient` → 默认生产 `https://yeyu-mvp.vercel.app/api/chat`
+- Prompt：Bundle `Resources/Prompts/*.md`，改后运行根目录 `npm run prompt:sync-ios`
+- SwiftData store：`SwiftDataBootstrap` / `YeyuStore_v2`（改模型需 bump store 名）
+
+## v1.1 能力（本地）
+
+- 流式：`ChatAPIClient.sendStream`，`ChatView` 的 `streamingText`；API 需 `stream: true`（见 `api/chat.js`）
+- 记忆：`UserProfileService` + 设置「本地记忆」；勿把对话原文写入 profile
+
+## 视觉（P0 vs 0515）
+
+- P0：**功能验收优先**；色/圆角用 Token，可向 0515 轻量靠拢，**不改**首页信息架构（横向 Chip、背景插画、玻璃输入框等留 v1.1）。
+- 0515 色值只加在 `YeyuDesignTokens` 的 **0515 预留** 段，见 `ios/VISUAL_ROADMAP.md`、`FIGMA_LINEAR_SYNC.md`。
+
+## 左侧抽屉
+
+- 功能以 **`ios/DRAWER_SCOPE.md`** 为准（= 当前实现）；对齐 YUQ-30/0515 **勿擅自扩入口**；设计多出的项非永久不做，需单独立项。
+
+## 禁止
+
+- 引入 RN / UIKit _storyboard 主流程
+- 硬编码色值（用 `YeyuDesignTokens`）
+- P0 内做 0515 整屏像素还原（除非 YUQI 明确开视觉收口里程碑）
+
+## 验收
+
+- P0：`ios/P0_ACCEPTANCE.md`
+- 视觉排期：`ios/VISUAL_ROADMAP.md`
+- v1.1 增量：`ios/V1.1_NOTES.md`

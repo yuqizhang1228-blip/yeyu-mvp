@@ -1,0 +1,34 @@
+# ⚠️ 已归档 — 本目录规则不再适用于主工程
+
+React Native 试验稿已于 **2026-06-02** 归档。请在仓库根目录遵循：
+
+- `.cursor/rules/yeyu-project.mdc`
+- `AGENTS.md` / `CLAUDE.md`
+- `MONOREPO.md`
+
+**iOS 主工程**：`../ios/`（SwiftUI + SwiftData）。
+
+以下内容仅作历史参考，**禁止**据此在新功能中继续扩展 RN。
+
+---
+
+# 夜屿 (Yeyu) — 跨端协作与开发基准（历史 RN 版）
+
+> 归档前 RN 规则原文保留如下。
+
+## 1. 角色定位
+
+- **身份**：资深 React Native 架构师（已 superseded by SwiftUI 路线）。
+- **沟通**：简体中文；贴近设计师心智。
+
+## 2. 设计铁律 (D2C)
+
+- 引用 `src/constants/theme.ts` Design Tokens，禁止硬编码 Hex。
+
+## 3. 技术栈约束（已废弃）
+
+- Zustand + MMKV + RN CLI 0.73；勿用 Expo。
+
+## 4. 协作
+
+- 见 `HANDOVER.md`、`ARCHIVED.md`。
