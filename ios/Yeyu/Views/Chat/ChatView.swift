@@ -11,6 +11,7 @@ struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dismiss) private var dismiss
     @AppStorage(YeyuUser.usernameKey) private var username = ""
 
     let sessionId: UUID
@@ -107,12 +108,18 @@ struct ChatView: View {
     /// 顶栏 — Figma `226:2479` Nav bar：左 Menu 24 + 右 icon/add 24，无居中文案。
     private var chatHeader: some View {
         HStack {
-            Button { appState.openDrawer() } label: {
-                YeyuNavMenuIcon()
+            Button {
+                // 离开会话：归档（生成标题 + 沉淀记忆）后返回上一页
+                Task { await archiveCurrentSessionIfNeeded() }
+                dismiss()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(YeyuColor.textPrimary)
                     .frame(width: 44, height: 44, alignment: .leading)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel("打开菜单")
+            .accessibilityLabel("返回")
 
             Spacer()
 
