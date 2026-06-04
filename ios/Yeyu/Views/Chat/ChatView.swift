@@ -10,6 +10,7 @@ struct ChatView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage(YeyuUser.usernameKey) private var username = ""
 
     let sessionId: UUID
@@ -95,6 +96,10 @@ struct ChatView: View {
                 initialSent = true
                 await sendUserMessage(initialMessage)
             }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            // 退后台也沉淀一次（用户不一定点「新对话」），按会话节流避免重复
+            if phase == .background { triggerMemoryExtraction() }
         }
     }
 
@@ -321,14 +326,22 @@ struct ChatView: View {
         session.updatedAt = .now
         try? modelContext.save()
 
-        // 对话沉淀记忆（YUQ-39 闭环）：仅在「参考保存记忆」开启时。
-        // 在主线程把会话拼成纯文本，再交给后台抽取，避免传递非 Sendable 的 SwiftData 模型。
-        if MemoryStore.autoEnabled {
-            let transcript = messagesForAPI
-                .map { ($0.messageRole == .user ? "用户" : "AI") + "：" + $0.content }
-                .joined(separator: "\n")
-            Task { await MemoryExtractionService.extractAndStore(fromTranscript: transcript) }
-        }
+        triggerMemoryExtraction()
+    }
+
+    /// 对话沉淀记忆（YUQ-39 闭环）。归档时 + 退后台时调用；服务内按会话节流、受开关控制。
+    /// 主线程拼纯文本，再交后台抽取，避免传递非 Sendable 的 SwiftData 模型。
+    private func triggerMemoryExtraction() {
+        guard MemoryStore.autoEnabled, let session else { return }
+        let msgs = messagesForAPI
+        guard msgs.contains(where: { $0.messageRole == .user }),
+              msgs.contains(where: { $0.messageRole == .assistant }) else { return }
+        let sid = session.id
+        guard !MemoryStore.hasExtracted(sid) else { return }
+        let transcript = msgs
+            .map { ($0.messageRole == .user ? "用户" : "AI") + "：" + $0.content }
+            .joined(separator: "\n")
+        Task { await MemoryExtractionService.extractAndStore(sessionId: sid, fromTranscript: transcript) }
     }
 
     private func sendUserMessage(_ text: String) async {
@@ -394,6 +407,10 @@ struct ChatView: View {
             var extra: [String] = [timeCtx.systemLine]
             if let nameLine = YeyuUser.systemNameLine(stored: username) {
                 extra.append(nameLine)
+            }
+            // 注入长期记忆（控量 top-8），让对话「记得你」（YUQ-39 P1）
+            if let memLine = MemoryStore.chatSystemLine() {
+                extra.append(memLine)
             }
 
             var reply = try await fetchAssistantReply(history: history, extra: extra)

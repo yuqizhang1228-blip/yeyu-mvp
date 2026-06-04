@@ -33,6 +33,7 @@
 		A10000000000000000000024 /* CardBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000024 /* CardBarView.swift */; };
 		A10000000000000000000025 /* chip_system.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000025 /* chip_system.md */; };
 		A10000000000000000000026 /* history_title_system.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000026 /* history_title_system.md */; };
+		A10000000000000000000099 /* memory_extraction.md in Resources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000099 /* memory_extraction.md */; };
 		A10000000000000000000027 /* YeyuUser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000027 /* YeyuUser.swift */; };
 		A10000000000000000000028 /* DataResetService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000028 /* DataResetService.swift */; };
 		A10000000000000000000029 /* NameSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000029 /* NameSetupView.swift */; };
@@ -72,6 +73,7 @@
 		B10000000000000000000024 /* CardBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CardBarView.swift; sourceTree = "<group>"; };
 		B10000000000000000000025 /* chip_system.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = chip_system.md; sourceTree = "<group>"; };
 		B10000000000000000000026 /* history_title_system.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = history_title_system.md; sourceTree = "<group>"; };
+		B10000000000000000000099 /* memory_extraction.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = memory_extraction.md; sourceTree = "<group>"; };
 		B10000000000000000000027 /* YeyuUser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YeyuUser.swift; sourceTree = "<group>"; };
 		B10000000000000000000028 /* DataResetService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataResetService.swift; sourceTree = "<group>"; };
 		B10000000000000000000029 /* NameSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NameSetupView.swift; sourceTree = "<group>"; };
@@ -255,6 +257,7 @@
 				B10000000000000000000017 /* system_production.md */,
 				B10000000000000000000025 /* chip_system.md */,
 				B10000000000000000000026 /* history_title_system.md */,
+				B10000000000000000000099 /* memory_extraction.md */,
 			);
 			path = Prompts;
 			sourceTree = "<group>";
@@ -317,6 +320,7 @@
 				A10000000000000000000017 /* system_production.md in Resources */,
 				A10000000000000000000025 /* chip_system.md in Resources */,
 				A10000000000000000000026 /* history_title_system.md in Resources */,
+				A10000000000000000000099 /* memory_extraction.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

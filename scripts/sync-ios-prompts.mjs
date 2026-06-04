@@ -7,7 +7,7 @@ const repoRoot = path.join(__dirname, "..");
 const srcDir = path.join(repoRoot, "prompts");
 const destDir = path.join(repoRoot, "ios", "Yeyu", "Resources", "Prompts");
 
-const files = ["system_production.md", "chip_system.md", "history_title_system.md"];
+const files = ["system_production.md", "chip_system.md", "history_title_system.md", "memory_extraction.md"];
 
 for (const name of files) {
   const src = path.join(srcDir, name);

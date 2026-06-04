@@ -138,6 +138,34 @@ enum MemoryStore {
         UserDefaults.standard.removeObject(forKey: key)
     }
 
+    /// 注入主对话 system 的记忆补充（控量 top-8）；无记忆返回 nil。
+    static func chatSystemLine() -> String? {
+        let mems = all()
+        guard !mems.isEmpty else { return nil }
+        let list = mems.prefix(8).map { "・\($0.text)" }.joined(separator: "\n")
+        return "【关于对方的长期记忆——自然融入即可，别主动复述、别让对方觉得被监视；与当前话题无关就忽略】\n\(list)"
+    }
+
+    // MARK: 抽取节流（按会话去重，避免重复/频繁调用）
+
+    private static let extractedKey = "yeyu_mem_extracted_sessions"
+
+    static func hasExtracted(_ sessionId: UUID) -> Bool {
+        extractedSet().contains(sessionId.uuidString)
+    }
+
+    static func markExtracted(_ sessionId: UUID) {
+        var set = extractedSet()
+        set.insert(sessionId.uuidString)
+        var arr = Array(set)
+        if arr.count > 200 { arr = Array(arr.suffix(200)) }
+        UserDefaults.standard.set(arr, forKey: extractedKey)
+    }
+
+    private static func extractedSet() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: extractedKey) ?? [])
+    }
+
     /// 精确归一化去重（去空格/句号、小写）。语义级去重见难度评估，暂不做。
     private static func normalize(_ s: String) -> String {
         s.replacingOccurrences(of: " ", with: "")
@@ -150,7 +178,13 @@ enum MemoryStore {
 /// 对话 → 记忆抽取（YUQ-39 闭环的「沉淀」环节）。
 /// 在一段对话收束时调用；仅在「参考保存记忆」开启时写入。
 enum MemoryExtractionService {
-    private static let systemPrompt = """
+    /// 抽取提示词走正规流程：`prompts/memory_extraction.md` → bundle；缺失时回退内联。
+    private static var systemPrompt: String {
+        let loaded = PromptLoader.load("memory_extraction")
+        return loaded.isEmpty ? inlineFallback : loaded
+    }
+
+    private static let inlineFallback = """
     你是一个「用户长期记忆」抽取器。下面是用户与一个情绪陪伴 AI 的一段对话。
     请只抽取关于「用户本人」长期稳定、值得长期记住的事实或处境，例如：职业/身份、长期目标、反复出现的核心困扰、重要关系、明确的价值观或偏好。
     严格要求：
@@ -160,9 +194,12 @@ enum MemoryExtractionService {
     - 只输出 JSON 字符串数组本身，例如 ["用户是一名UX设计师","用户正在思考职业方向"]，禁止任何解释或额外文字。
     """
 
-    static func extractAndStore(fromTranscript transcript: String) async {
+    /// 按会话节流：同一会话只抽一次（在网络调用前标记，避免归档+退后台双触发重复扣费）。
+    static func extractAndStore(sessionId: UUID, fromTranscript transcript: String) async {
+        guard MemoryStore.autoEnabled, !MemoryStore.hasExtracted(sessionId) else { return }
         let convo = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
         guard convo.count >= 60 else { return }
+        MemoryStore.markExtracted(sessionId)
         let client = ChatAPIClient()
         do {
             let raw = try await client.send(
