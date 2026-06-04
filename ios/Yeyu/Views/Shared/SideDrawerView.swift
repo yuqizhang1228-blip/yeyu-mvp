@@ -84,6 +84,14 @@ struct SideDrawerView: View {
 
             ScrollView {
                 VStack(spacing: 0) {
+                    if sessions.isEmpty {
+                        Text("还没有对话\n回到首页，说点什么开始吧")
+                            .font(YeyuTypography.footnote)
+                            .foregroundStyle(Color.white.opacity(0.3))
+                            .lineSpacing(4)
+                            .padding(.vertical, YeyuSpacing.md)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                     ForEach(sessions.prefix(12)) { session in
                         Button {
                             appState.drawerOpen = false
