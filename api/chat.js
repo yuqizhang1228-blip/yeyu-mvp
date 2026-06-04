@@ -3,7 +3,7 @@ const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
 function buildDeepSeekBody(body) {
   const payload = {
-    model: body.model || 'deepseek-chat',
+    model: body.model || 'deepseek-v4-pro',
     max_tokens: body.max_tokens ?? 500,
     temperature: body.temperature ?? 0.7,
     top_p: body.top_p ?? 0.9,
