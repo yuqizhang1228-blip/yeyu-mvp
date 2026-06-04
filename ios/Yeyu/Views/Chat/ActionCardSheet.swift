@@ -46,10 +46,10 @@ struct ActionCardSheet: View {
                                 .padding(YeyuSpacing.xl)
                                 .background(YeyuColor.surfaceActionCard)
                                 .overlay(
-                                    RoundedRectangle(cornerRadius: YeyuRadius.lg)
+                                    RoundedRectangle(cornerRadius: YeyuRadius.xl)
                                         .stroke(Color.white.opacity(0.1), lineWidth: 1)
                                 )
-                                .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
+                                .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.xl))
 
                             // 多余的行动条目（小字补充）
                             ForEach(Array(card.actionItems.dropFirst()), id: \.self) { item in
@@ -115,7 +115,7 @@ struct ActionCardSheet: View {
         .background(YeyuColor.backgroundSheet)
         .presentationDetents([.large])
         .presentationDragIndicator(.visible)
-        .presentationCornerRadius(12)
+        .presentationCornerRadius(28)
     }
 
     // MARK: - 子视图

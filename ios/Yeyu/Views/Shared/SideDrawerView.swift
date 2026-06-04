@@ -1,8 +1,8 @@
 import SwiftUI
 import SwiftData
 
-/// 左侧抽屉 — 功能范围见 `ios/DRAWER_SCOPE.md`（勿按 YUQ-30 全量 spec 扩入口）。
-/// 设计稿：Figma `226:2399`（0515 · 左侧弹窗，v1 功能子集）
+/// 左侧抽屉 — 功能范围见 `ios/DRAWER_SCOPE.md`（勿按 YUQ-30 全量 spec 扩入口：
+/// 无会员 Banner、无「支持鼓励」路由）。视觉对齐 Figma `226:2399`（0515 · 左侧弹窗）。
 struct SideDrawerView: View {
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
@@ -10,6 +10,9 @@ struct SideDrawerView: View {
     @Query(sort: \ChatSession.updatedAt, order: .reverse) private var sessions: [ChatSession]
 
     var currentSessionId: UUID?
+
+    /// 「支持鼓励」暂无 PRD/路由，先以占位提示呈现（YUQI 2026-06-03 裁决）。
+    @State private var showSupportToast = false
 
     var body: some View {
         if appState.drawerOpen {
@@ -28,25 +31,49 @@ struct SideDrawerView: View {
     private var drawerPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
 
-            // ── 品牌标题 ──────────────────────────────────────
-            VStack(alignment: .leading, spacing: YeyuSpacing.xs) {
-                Text("夜屿")
-                    .font(.system(size: 24, weight: .regular))
+            // ── 页眉：标题 + 关闭（411 同款菜单 icon）─────────────
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: YeyuSpacing.xs) {
+                    Text("夜屿")
+                        .font(.system(size: 24, weight: .regular))
+                        .foregroundStyle(.white)
+                    Text("一款情绪拆解 AI 助手")
+                        .font(YeyuTypography.footnote)
+                        .foregroundStyle(Color.white.opacity(0.7))
+                }
+                Spacer()
+                Button { appState.drawerOpen = false } label: {
+                    VStack(alignment: .trailing, spacing: 5) {
+                        Rectangle().frame(width: 20, height: 1.5)
+                        Rectangle().frame(width: 14, height: 1.5)
+                        Rectangle().frame(width: 20, height: 1.5)
+                    }
                     .foregroundStyle(.white)
-                Text("一款情绪拆解 AI 助手")
-                    .font(YeyuTypography.footnote)
-                    .foregroundStyle(Color.white.opacity(0.7))
+                    .frame(width: 44, height: 44, alignment: .topTrailing)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityLabel("收起菜单")
+                .padding(.trailing, -((44 - 20) / 2))
+                .offset(y: -10)
             }
-            .padding(.bottom, YeyuSpacing.xxl)
+            .padding(.bottom, YeyuSpacing.xl)
 
-            // ── 功能入口 ─────────────────────────────────────
-            navRow(icon: "heart.text.square", label: "行动卡片") {
+            // ── 会员转化 Banner（226:2407）────────────────────
+            membershipBanner
+                .padding(.bottom, YeyuSpacing.xxl)
+
+            // ── 功能入口（行动卡片 / 个性化 / 支持鼓励 / 设置）──────
+            navRow(icon: "heart", label: "行动卡片") {
                 appState.drawerOpen = false
                 appState.openHistory()
             }
-            navRow(icon: "person.crop.circle", label: "个性化") {
+            navRow(icon: "square.and.pencil", label: "个性化") {
                 appState.drawerOpen = false
                 appState.openPersonalization()
+            }
+            navRow(icon: "tag", label: "支持鼓励") {
+                // 占位：功能未排期，给一个克制的「敬请期待」提示，不关抽屉。
+                showSupportToast = true
             }
             navRow(icon: "gearshape", label: "设置") {
                 appState.drawerOpen = false
@@ -78,37 +105,125 @@ struct SideDrawerView: View {
                                     .foregroundStyle(
                                         session.id == currentSessionId
                                             ? YeyuColor.primary
-                                            : .white
+                                            : Color.white.opacity(0.85)
                                     )
                                     .lineLimit(1)
                                 Spacer()
                             }
                             .padding(.vertical, YeyuSpacing.md)
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
+            .scrollIndicators(.hidden)
 
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, YeyuSpacing.xl)
-        .padding(.top, YeyuSpacing.xxxl)
+        .padding(.top, YeyuSpacing.md)
         .padding(.bottom, YeyuSpacing.xl)
         .frame(width: 320)
         .frame(maxHeight: .infinity)
-        .background {
-            ZStack {
-                Color(hex: 0x1A1A1A, alpha: 0.92)
-            }
-            .background(.ultraThinMaterial)
-            .environment(\.colorScheme, .dark)
-        }
+        // 材质满铺全屏高（含状态栏 / Home Indicator），内容仍守安全区。
+        .background { panelSurface.ignoresSafeArea() }
         .overlay(alignment: .trailing) {
             // 右侧内边缘分割线（Figma: inset -1px 0px rgba(255,255,255,0.05)）
             Rectangle()
                 .fill(Color.white.opacity(0.05))
                 .frame(width: 1)
+                .ignoresSafeArea()
         }
+        .overlay(alignment: .bottom) {
+            if showSupportToast { supportToast }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showSupportToast)
+        .sensoryFeedback(.impact(weight: .light), trigger: showSupportToast)
+        .environment(\.colorScheme, .dark)
+    }
+
+    private var supportToast: some View {
+        Text("敬请期待")
+            .font(YeyuTypography.footnote)
+            .foregroundStyle(.white)
+            .padding(.horizontal, YeyuSpacing.lg)
+            .padding(.vertical, YeyuSpacing.sm + 2)
+            .background(.ultraThinMaterial, in: Capsule())
+            .padding(.bottom, 48)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
+            .task(id: showSupportToast) {
+                guard showSupportToast else { return }
+                try? await Task.sleep(nanoseconds: 1_600_000_000)
+                showSupportToast = false
+            }
+            .accessibilityAddTraits(.isStaticText)
+    }
+
+    /// 面板材质：iOS 26 用暗色 Liquid Glass（与首页输入框统一语言），更低版本回退到暗底 + ultraThinMaterial。
+    @ViewBuilder
+    private var panelSurface: some View {
+        if #available(iOS 26.0, *) {
+            Color.clear
+                .glassEffect(
+                    .regular.tint(YeyuColor.backgroundDrawer.opacity(0.5)),
+                    in: Rectangle()
+                )
+        } else {
+            YeyuColor.backgroundDrawer.opacity(0.92)
+                .background(.ultraThinMaterial)
+        }
+    }
+
+    // MARK: 会员 Banner（226:2407）
+
+    private var membershipBanner: some View {
+        Button {
+            // TODO: 接入二级「会员转化」弹窗（YUQI 后补）；当前占位提示。
+            showSupportToast = true
+        } label: {
+            ZStack(alignment: .leading) {
+                bannerArt
+                Text("成为会员")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.leading, 172)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 72)
+            .background(Color(hex: 0x282828))
+            .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("成为会员")
+    }
+
+    /// 月 + 双山插画（原生绘制，对齐 226:2407 的月/山母题；暗海层近黑省略）。
+    private var bannerArt: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(
+                    colors: [Color(hex: 0xEDEDED), Color(hex: 0x6B6B6B)],
+                    startPoint: .top, endPoint: .bottom))
+                .frame(width: 80, height: 80)
+                .offset(x: 0, y: 17)
+            BannerTriangle()
+                .fill(LinearGradient(
+                    colors: [Color(hex: 0x8E8E8E), Color(hex: 0x3A3A3A)],
+                    startPoint: .top, endPoint: .bottom))
+                .frame(width: 98, height: 50)
+                .offset(x: -10, y: 24)
+                .opacity(0.85)
+            BannerTriangle()
+                .fill(LinearGradient(
+                    colors: [Color(hex: 0x7C7C7C), Color(hex: 0x343434)],
+                    startPoint: .top, endPoint: .bottom))
+                .frame(width: 52, height: 30)
+                .offset(x: 36, y: 33)
+                .opacity(0.85)
+        }
+        .frame(width: 150, height: 72)
+        .clipped()
     }
 
     private func navRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
@@ -119,7 +234,7 @@ struct SideDrawerView: View {
                     .foregroundStyle(Color.white.opacity(0.7))
                     .frame(width: 20)
                 Text(label)
-                    .font(YeyuTypography.body)
+                    .font(YeyuTypography.callout)
                     .foregroundStyle(.white)
                 Spacer()
                 Image(systemName: "chevron.right")
@@ -127,6 +242,20 @@ struct SideDrawerView: View {
                     .foregroundStyle(Color.white.opacity(0.3))
             }
             .padding(.vertical, YeyuSpacing.md)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+/// 等腰三角（顶点居中朝上）— 会员 Banner 的「山」。
+private struct BannerTriangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { p in
+            p.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            p.closeSubpath()
         }
     }
 }

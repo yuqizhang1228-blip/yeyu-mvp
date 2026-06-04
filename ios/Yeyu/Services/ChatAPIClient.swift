@@ -133,7 +133,7 @@ struct ChatAPIClient {
         payload.append(contentsOf: messages)
 
         return ChatRequest(
-            model: "deepseek-chat",
+            model: "deepseek-v4-pro",
             messages: payload,
             temperature: 0.7,
             max_tokens: maxTokens,
