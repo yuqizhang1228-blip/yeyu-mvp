@@ -42,13 +42,7 @@ struct ChatView: View {
 
     var body: some View {
         ZStack(alignment: .leading) {
-            // 对话页底：与首页同族的克制深色（0515），避免大面积纯蓝黑。
-            LinearGradient(
-                colors: [YeyuColor.background0515Top, YeyuColor.backgroundDrawer],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
+            chatBackground
 
             VStack(spacing: 0) {
                 chatHeader
@@ -102,6 +96,42 @@ struct ChatView: View {
         .onChange(of: scenePhase) { _, phase in
             // 退后台也沉淀一次（用户不一定点「新对话」），按会话节流避免重复
             if phase == .background { triggerMemoryExtraction() }
+        }
+    }
+
+    /// 对话页背景（Figma 226:2460）：首屏月山图 + 毛玻璃暗罩（月山微弱可见）+ 顶/底渐变蒙层。
+    private var chatBackground: some View {
+        ZStack {
+            // 月山图重模糊 + #0F0F0F 70% 暗罩 ≈ backdrop-blur 65 + rgba(15,15,15,0.7)
+            Image("HomeHeroBackground")
+                .resizable()
+                .scaledToFill()
+                .blur(radius: 26)
+                .overlay(Color(hex: 0x0F0F0F).opacity(0.7))
+                .clipped()
+        }
+        .ignoresSafeArea()
+        // 顶部渐变蒙层（深→透）
+        .overlay(alignment: .top) {
+            LinearGradient(
+                colors: [Color(hex: 0x161616), Color(hex: 0x161616).opacity(0)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 160)
+            .ignoresSafeArea(edges: .top)
+        }
+        // 底部渐变蒙层（透→深，#161616 实底托住输入区，对齐 226:2491）
+        .overlay(alignment: .bottom) {
+            LinearGradient(
+                stops: [
+                    .init(color: Color(hex: 0x161616).opacity(0), location: 0),
+                    .init(color: Color(hex: 0x161616), location: 0.30),
+                    .init(color: Color(hex: 0x161616), location: 1),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 260)
+            .ignoresSafeArea(edges: .bottom)
         }
     }
 
