@@ -9,6 +9,7 @@ struct ChatView: View {
 
     @Environment(AppState.self) private var appState
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(YeyuUser.usernameKey) private var username = ""
 
     let sessionId: UUID
@@ -410,6 +411,12 @@ struct ChatView: View {
             UIImpactFeedbackGenerator(style: .soft).impactOccurred()
             #endif
 
+            // 打字机效果（YUQ-32 #7 客户端版）：非真流式路径下，逐字展现已清洗文案。
+            // 真后端 SSE 就绪后由 fetchAssistantReply 直接流式（YUQ-47），此处自动跳过。
+            if streamingText == nil {
+                await revealTypewriter(reply)
+            }
+
             let aiMsg = ChatMessage(role: .assistant, content: reply)
             aiMsg.session = session
             session.messages.append(aiMsg)
@@ -421,6 +428,24 @@ struct ChatView: View {
             session.messages.append(errMsg)
             try? modelContext.save()
             pendingChoices = nil
+        }
+    }
+
+    /// 客户端逐字展现（打字机）。总时长受控（长文不至于太慢）；减弱动效时直接整段呈现。
+    private func revealTypewriter(_ text: String) async {
+        guard !reduceMotion else { return }
+        let chars = Array(text)
+        guard !chars.isEmpty else { return }
+        let total = chars.count
+        let steps = min(total, 70)
+        let perStep = max(1, total / steps)
+        var shown = 0
+        streamingText = ""
+        while shown < total {
+            shown = min(total, shown + perStep)
+            streamingText = String(chars[0..<shown])
+            if Task.isCancelled { return }
+            try? await Task.sleep(nanoseconds: 18_000_000)
         }
     }
 
