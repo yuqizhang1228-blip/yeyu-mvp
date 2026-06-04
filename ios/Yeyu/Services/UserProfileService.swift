@@ -75,7 +75,120 @@ enum UserProfileService {
         if !note.isEmpty {
             lines.append("对方在设置里写下的备忘（摘录）：\(String(note.prefix(220)))")
         }
+        // 长期记忆条目（YUQ-39）：对话沉淀 + 用户自定义
+        let mems = MemoryStore.all()
+        if !mems.isEmpty {
+            let list = mems.prefix(8).map { "・\($0.text)" }.joined(separator: "\n")
+            lines.append("关于 TA 的长期记忆（判断场景方向用，勿原样复述）：\n\(list)")
+        }
         guard !lines.isEmpty else { return nil }
         return "【本地记忆摘要——仅用于你选「更可能点中 TA」的场景方向，勿在输出 JSON 里暴露备注原文】\n" + lines.joined(separator: "\n")
+    }
+}
+
+// MARK: - 长期记忆（YUQ-39）
+
+/// 单条记忆：对话沉淀（auto）或用户手动添加（manual）。
+struct MemoryEntry: Codable, Identifiable, Equatable {
+    var id: UUID = UUID()
+    var text: String
+    var createdAt: Date = .now
+    var source: String = "auto"   // "auto" | "manual"
+}
+
+/// 本地记忆库（独立 UserDefaults 键，避免改 `UserProfile` 触发解码迁移）。
+enum MemoryStore {
+    private static let key = "yeyu_memories"
+    private static let maxCount = 50
+
+    static var autoEnabled: Bool {
+        // 与 PersonalizationView 的「参考保存记忆」开关同键；默认开。
+        UserDefaults.standard.object(forKey: "yeyu_auto_memory") as? Bool ?? true
+    }
+
+    static func all() -> [MemoryEntry] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let items = try? JSONDecoder().decode([MemoryEntry].self, from: data) else { return [] }
+        return items
+    }
+
+    private static func persist(_ items: [MemoryEntry]) {
+        if let data = try? JSONEncoder().encode(items) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    @discardableResult
+    static func add(_ text: String, source: String = "auto") -> Bool {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count >= 4 else { return false }
+        var items = all()
+        let norm = normalize(t)
+        guard !items.contains(where: { normalize($0.text) == norm }) else { return false }
+        items.insert(MemoryEntry(text: t, source: source), at: 0)
+        persist(Array(items.prefix(maxCount)))
+        return true
+    }
+
+    static func delete(_ id: UUID) {
+        persist(all().filter { $0.id != id })
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+
+    /// 精确归一化去重（去空格/句号、小写）。语义级去重见难度评估，暂不做。
+    private static func normalize(_ s: String) -> String {
+        s.replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "。", with: "")
+            .replacingOccurrences(of: "，", with: "")
+            .lowercased()
+    }
+}
+
+/// 对话 → 记忆抽取（YUQ-39 闭环的「沉淀」环节）。
+/// 在一段对话收束时调用；仅在「参考保存记忆」开启时写入。
+enum MemoryExtractionService {
+    private static let systemPrompt = """
+    你是一个「用户长期记忆」抽取器。下面是用户与一个情绪陪伴 AI 的一段对话。
+    请只抽取关于「用户本人」长期稳定、值得长期记住的事实或处境，例如：职业/身份、长期目标、反复出现的核心困扰、重要关系、明确的价值观或偏好。
+    严格要求：
+    - 不要抽取一次性的情绪、寒暄、客套，或只在本次对话里成立的临时状态。
+    - 每条一句话，用第三人称「用户……」，尽量简洁具体。
+    - 如果没有值得长期记住的，返回空数组 []。
+    - 只输出 JSON 字符串数组本身，例如 ["用户是一名UX设计师","用户正在思考职业方向"]，禁止任何解释或额外文字。
+    """
+
+    static func extractAndStore(fromTranscript transcript: String) async {
+        let convo = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard convo.count >= 60 else { return }
+        let client = ChatAPIClient()
+        do {
+            let raw = try await client.send(
+                messages: [.init(role: "user", content: String(convo.prefix(4000)))],
+                systemPrompt: systemPrompt,
+                extraSystemMessages: [],
+                maxTokens: 300
+            )
+            guard let items = parseJSONArray(raw) else { return }
+            for item in items.prefix(5) {
+                _ = MemoryStore.add(item, source: "auto")
+            }
+        } catch {
+            // 抽取失败静默忽略，不打断主流程
+        }
+    }
+
+    private static func parseJSONArray(_ raw: String) -> [String]? {
+        // 容错：截取首个 [ ... ]
+        guard let start = raw.firstIndex(of: "["),
+              let end = raw.lastIndex(of: "]"), start < end else { return nil }
+        let slice = String(raw[start...end])
+        guard let data = slice.data(using: .utf8),
+              let arr = try? JSONDecoder().decode([String].self, from: data) else { return nil }
+        return arr
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
     }
 }

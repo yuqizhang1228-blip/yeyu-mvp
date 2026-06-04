@@ -320,6 +320,15 @@ struct ChatView: View {
         }
         session.updatedAt = .now
         try? modelContext.save()
+
+        // 对话沉淀记忆（YUQ-39 闭环）：仅在「参考保存记忆」开启时。
+        // 在主线程把会话拼成纯文本，再交给后台抽取，避免传递非 Sendable 的 SwiftData 模型。
+        if MemoryStore.autoEnabled {
+            let transcript = messagesForAPI
+                .map { ($0.messageRole == .user ? "用户" : "AI") + "：" + $0.content }
+                .joined(separator: "\n")
+            Task { await MemoryExtractionService.extractAndStore(fromTranscript: transcript) }
+        }
     }
 
     private func sendUserMessage(_ text: String) async {

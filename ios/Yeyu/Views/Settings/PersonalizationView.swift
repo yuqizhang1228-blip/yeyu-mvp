@@ -4,8 +4,7 @@ import SwiftUI
 struct PersonalizationView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("yeyu_auto_memory") private var autoMemory = true
-    @State private var manualNote = ""
-    @State private var showMemoryEditor = false
+    @State private var showMemoryManagement = false
     @State private var showStyleToast = false
 
     var body: some View {
@@ -18,7 +17,7 @@ struct PersonalizationView: View {
                     groupCard {
                         toggleRow(label: "参考保存记忆", isOn: $autoMemory)
                         rowDivider
-                        navRow(label: "编辑你的记忆") { showMemoryEditor = true }
+                        navRow(label: "编辑你的记忆") { showMemoryManagement = true }
                     }
                     .padding(.horizontal, YeyuSpacing.xl)
 
@@ -41,8 +40,7 @@ struct PersonalizationView: View {
         }
         .animation(.easeInOut(duration: 0.2), value: showStyleToast)
         .sensoryFeedback(.impact(weight: .light), trigger: showStyleToast)
-        .sheet(isPresented: $showMemoryEditor) { memoryEditorSheet }
-        .onAppear { manualNote = UserProfileService.load().manualNote }
+        .sheet(isPresented: $showMemoryManagement) { MemoryManagementView() }
     }
 
     // MARK: 分组卡
@@ -111,54 +109,6 @@ struct PersonalizationView: View {
             }
     }
 
-    // MARK: 编辑你的记忆（保留手动记忆功能）
-
-    private var memoryEditorSheet: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            HStack {
-                Button { showMemoryEditor = false } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.white)
-                        .frame(width: 32, height: 32)
-                }
-                Spacer()
-                Text("编辑你的记忆").font(.system(size: 18)).foregroundStyle(.white)
-                Spacer()
-                Color.clear.frame(width: 32, height: 32)
-            }
-            .padding(.horizontal, YeyuSpacing.xl)
-            .padding(.vertical, 15)
-
-            Text("写下希望夜屿长期记住的事，供 Chip 生成参考，不会出现在对话里。")
-                .font(.system(size: 12))
-                .foregroundStyle(Color.white.opacity(0.4))
-                .lineSpacing(4)
-                .padding(.horizontal, YeyuSpacing.xl)
-                .padding(.bottom, YeyuSpacing.md)
-
-            TextEditor(text: $manualNote)
-                .font(YeyuTypography.body)
-                .foregroundStyle(YeyuColor.textPrimary)
-                .scrollContentBackground(.hidden)
-                .frame(minHeight: 160)
-                .padding(YeyuSpacing.md)
-                .background(Color.white.opacity(0.05), in: RoundedRectangle(cornerRadius: YeyuRadius.lg))
-                .padding(.horizontal, YeyuSpacing.xl)
-
-            Spacer()
-        }
-        .background(sheetBg)
-        .presentationDetents([.large])
-        .presentationCornerRadius(24)
-        .presentationDragIndicator(.visible)
-        .onChange(of: manualNote) { _, newValue in
-            var profile = UserProfileService.load()
-            profile.manualNote = newValue
-            UserProfileService.save(profile)
-        }
-    }
-
     // MARK: 通用
 
     private var sheetHeader: some View {
@@ -198,3 +148,128 @@ struct PersonalizationView: View {
 }
 
 #Preview { PersonalizationView() }
+
+/// 记忆管理（YUQ-39）— 对齐 Figma 226:2868：记忆列表 + 左滑删除 + 清空（二次确认）。
+/// 「用户可以自定义」：右上「+」手动添加；自动沉淀见 `MemoryExtractionService`。
+struct MemoryManagementView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var memories: [MemoryEntry] = []
+    @State private var showClearConfirm = false
+    @State private var showAdd = false
+    @State private var newText = ""
+
+    var body: some View {
+        VStack(spacing: 0) {
+            header
+            content
+        }
+        .background(sheetBg)
+        .presentationDetents([.large])
+        .presentationCornerRadius(24)
+        .presentationDragIndicator(.visible)
+        .onAppear { memories = MemoryStore.all() }
+        .confirmationDialog("确认清空所有记忆？\n清空后无法恢复。", isPresented: $showClearConfirm, titleVisibility: .visible) {
+            Button("清空", role: .destructive) {
+                MemoryStore.clear()
+                memories = []
+            }
+            Button("取消", role: .cancel) {}
+        }
+        .alert("添加一条记忆", isPresented: $showAdd) {
+            TextField("例如：用户是一名 UX 设计师", text: $newText)
+            Button("添加") {
+                if MemoryStore.add(newText, source: "manual") { memories = MemoryStore.all() }
+                newText = ""
+            }
+            Button("取消", role: .cancel) { newText = "" }
+        } message: {
+            Text("写一条希望夜屿长期记住的事实。")
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if memories.isEmpty {
+            Spacer()
+            VStack(spacing: YeyuSpacing.sm) {
+                Text("还没有记忆")
+                    .font(YeyuTypography.body)
+                    .foregroundStyle(YeyuColor.textTertiary)
+                Text("开启「参考保存记忆」后，夜屿会从对话里慢慢记住关于你的事；也可以点右上「+」自己加一条。")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.white.opacity(0.3))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, YeyuSpacing.xxl)
+            }
+            Spacer()
+        } else {
+            List {
+                ForEach(memories) { item in
+                    HStack(alignment: .top, spacing: YeyuSpacing.sm) {
+                        Text(item.text)
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white)
+                            .lineSpacing(4)
+                        Spacer(minLength: 0)
+                        if item.source == "manual" {
+                            Text("自定义")
+                                .font(.system(size: 10))
+                                .foregroundStyle(YeyuColor.primary.opacity(0.7))
+                                .padding(.top, 2)
+                        }
+                    }
+                    .padding(.vertical, YeyuSpacing.sm)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparatorTint(Color.white.opacity(0.06))
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            MemoryStore.delete(item.id)
+                            memories = MemoryStore.all()
+                        } label: { Label("删除", systemImage: "trash") }
+                    }
+                }
+            }
+            .listStyle(.plain)
+            .scrollContentBackground(.hidden)
+        }
+    }
+
+    private var header: some View {
+        ZStack {
+            Text("记忆管理")
+                .font(.system(size: 18))
+                .foregroundStyle(.white)
+            HStack {
+                Button { dismiss() } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                Spacer()
+                Button { showAdd = true } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 17, weight: .regular))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 44)
+                }
+                .accessibilityLabel("添加记忆")
+                Button("清空") { showClearConfirm = true }
+                    .font(.system(size: 15))
+                    .foregroundStyle(memories.isEmpty ? YeyuColor.textTertiary : YeyuColor.error)
+                    .disabled(memories.isEmpty)
+            }
+        }
+        .padding(.horizontal, YeyuSpacing.xl)
+        .frame(height: 50)
+    }
+
+    private var sheetBg: some View {
+        Color(hex: 0x161616, alpha: 0.92)
+            .background(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .ignoresSafeArea()
+    }
+}
