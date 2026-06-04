@@ -61,19 +61,19 @@ struct SideDrawerView: View {
                 .padding(.bottom, YeyuSpacing.xxl)
 
             // ── 功能入口（行动卡片 / 个性化 / 支持鼓励 / 设置）──────
-            navRow(icon: "heart", label: "行动卡片") {
+            navRow(icon: .heart, label: "行动卡片") {
                 appState.drawerOpen = false
                 appState.openHistory()
             }
-            navRow(icon: "square.and.pencil", label: "个性化") {
+            navRow(icon: .pencil, label: "个性化") {
                 appState.drawerOpen = false
                 appState.openPersonalization()
             }
-            navRow(icon: "tag", label: "支持鼓励") {
+            navRow(icon: .tag, label: "支持鼓励") {
                 // 占位：功能未排期，给一个克制的「敬请期待」提示，不关抽屉。
                 showSupportToast = true
             }
-            navRow(icon: "gearshape", label: "设置") {
+            navRow(icon: .gear, label: "设置") {
                 appState.drawerOpen = false
                 appState.openSettings()
             }
@@ -191,20 +191,15 @@ struct SideDrawerView: View {
         .accessibilityLabel("成为会员")
     }
 
-    private func navRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
+    private func navRow(icon: YeyuVectorIcon, label: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             HStack(spacing: YeyuSpacing.md) {
-                Image(systemName: icon)
-                    .font(.system(size: 16))
-                    .foregroundStyle(Color.white.opacity(0.7))
-                    .frame(width: 20)
+                YeyuVectorIconView(icon: icon, size: 20, lineWidth: 1.5, tint: .white)
                 Text(label)
                     .font(YeyuTypography.callout)
                     .foregroundStyle(.white)
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.footnote)
-                    .foregroundStyle(Color.white.opacity(0.3))
+                YeyuVectorIconView(icon: .chevron, size: 16, lineWidth: 1.5, tint: Color.white.opacity(0.3))
             }
             .padding(.vertical, YeyuSpacing.md)
             .contentShape(Rectangle())
