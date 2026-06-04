@@ -419,14 +419,14 @@ struct ChatView: View {
         if api.prefersStreaming {
             do {
                 var full = ""
-                streamingText = ""
+                // 不预置空串：保持思考条直到第一个 token 到达，避免空白间隙
                 for try await chunk in api.sendStream(
                     messages: history,
                     systemPrompt: SystemPrompt.production,
                     extraSystemMessages: extra
                 ) {
                     full += chunk
-                    streamingText = full
+                    streamingText = Self.streamDisplay(full)
                 }
                 return full
             } catch {
@@ -444,6 +444,18 @@ struct ChatView: View {
             systemPrompt: SystemPrompt.production,
             extraSystemMessages: extra
         )
+    }
+
+    /// 流式展示时隐藏协议标签（`<choices>` / `<card>` 都在回复末尾），避免标签闪现；
+    /// 返回的原始 `full` 仍含标签，供解析。
+    private static func streamDisplay(_ raw: String) -> String {
+        var s = raw
+        for marker in ["<choices", "<card"] {
+            if let r = s.range(of: marker, options: .caseInsensitive) {
+                s = String(s[..<r.lowerBound])
+            }
+        }
+        return s
     }
 
     private func completeChoiceGuide() {
