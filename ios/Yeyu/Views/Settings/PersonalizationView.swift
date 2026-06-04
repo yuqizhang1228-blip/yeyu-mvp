@@ -155,8 +155,6 @@ struct MemoryManagementView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var memories: [MemoryEntry] = []
     @State private var showClearConfirm = false
-    @State private var showAdd = false
-    @State private var newText = ""
 
     var body: some View {
         VStack(spacing: 0) {
@@ -175,16 +173,6 @@ struct MemoryManagementView: View {
             }
             Button("取消", role: .cancel) {}
         }
-        .alert("添加一条记忆", isPresented: $showAdd) {
-            TextField("例如：用户是一名 UX 设计师", text: $newText)
-            Button("添加") {
-                if MemoryStore.add(newText, source: "manual") { memories = MemoryStore.all() }
-                newText = ""
-            }
-            Button("取消", role: .cancel) { newText = "" }
-        } message: {
-            Text("写一条希望夜屿长期记住的事实。")
-        }
     }
 
     @ViewBuilder
@@ -195,7 +183,7 @@ struct MemoryManagementView: View {
                 Text("还没有记忆")
                     .font(YeyuTypography.body)
                     .foregroundStyle(YeyuColor.textTertiary)
-                Text("开启「参考保存记忆」后，夜屿会从对话里慢慢记住关于你的事；也可以点右上「+」自己加一条。")
+                Text("开启「参考保存记忆」后，夜屿会从对话里慢慢记住关于你的事。")
                     .font(.system(size: 12))
                     .foregroundStyle(Color.white.opacity(0.3))
                     .multilineTextAlignment(.center)
@@ -204,24 +192,25 @@ struct MemoryManagementView: View {
             }
             Spacer()
         } else {
+            // 列表行对齐 226:2868：正文 14pt 白（行高 1.6），底部 1px 白 10% 分割线（内缩 20）
             List {
                 ForEach(memories) { item in
-                    HStack(alignment: .top, spacing: YeyuSpacing.sm) {
+                    VStack(spacing: 0) {
                         Text(item.text)
                             .font(.system(size: 14))
                             .foregroundStyle(.white)
-                            .lineSpacing(4)
-                        Spacer(minLength: 0)
-                        if item.source == "manual" {
-                            Text("自定义")
-                                .font(.system(size: 10))
-                                .foregroundStyle(YeyuColor.primary.opacity(0.7))
-                                .padding(.top, 2)
-                        }
+                            .lineSpacing(6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, YeyuSpacing.xl)
+                            .padding(.vertical, YeyuSpacing.lg)
+                        Rectangle()
+                            .fill(Color.white.opacity(0.1))
+                            .frame(height: 1)
+                            .padding(.horizontal, YeyuSpacing.xl)
                     }
-                    .padding(.vertical, YeyuSpacing.sm)
+                    .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
-                    .listRowSeparatorTint(Color.white.opacity(0.06))
+                    .listRowSeparator(.hidden)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             MemoryStore.delete(item.id)
@@ -249,13 +238,6 @@ struct MemoryManagementView: View {
                         .contentShape(Rectangle())
                 }
                 Spacer()
-                Button { showAdd = true } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 17, weight: .regular))
-                        .foregroundStyle(.white)
-                        .frame(width: 36, height: 44)
-                }
-                .accessibilityLabel("添加记忆")
                 Button("清空") { showClearConfirm = true }
                     .font(.system(size: 15))
                     .foregroundStyle(memories.isEmpty ? YeyuColor.textTertiary : YeyuColor.error)
