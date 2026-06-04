@@ -1,6 +1,9 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
-/// 关于夜屿（YUQ-38）— 大弹窗呈现，对齐 Figma 226:2844（诞生记 · 创始人故事）。
+/// 关于夜屿（YUQ-38）— 大弹窗呈现，对齐 Figma 226:2844（月山 + 诞生记 + 创始人故事）。
 struct AboutView: View {
     @Environment(\.dismiss) private var dismiss
 
@@ -19,19 +22,12 @@ struct AboutView: View {
             sheetHeader
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    // ── 月/山插画 ────────────────────────────
-                    Image("HomeHeroBackground")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(height: 220)
-                        .frame(maxWidth: .infinity)
-                        .clipped()
-                        .padding(.bottom, YeyuSpacing.xl)
+                    heroMoon
 
-                    // ── 诞生记 ──────────────────────────────
                     Text("诞生记")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(.white)
+                        .padding(.horizontal, YeyuSpacing.xxl)
                         .padding(.bottom, YeyuSpacing.lg)
 
                     VStack(alignment: .leading, spacing: YeyuSpacing.md) {
@@ -49,13 +45,9 @@ struct AboutView: View {
                             .foregroundStyle(Color.white.opacity(0.8))
                             .padding(.top, YeyuSpacing.md)
                     }
-
-                    // ── 安全合规脚注（设计稿未含，产品安全要求保留）──
-                    safetyFooter
-                        .padding(.top, YeyuSpacing.xxxl)
+                    .padding(.horizontal, YeyuSpacing.xxl)
+                    .padding(.bottom, YeyuSpacing.xxxl)
                 }
-                .padding(.horizontal, YeyuSpacing.xxl)
-                .padding(.bottom, YeyuSpacing.xxl)
             }
         }
         .background(sheetBg)
@@ -64,23 +56,34 @@ struct AboutView: View {
         .presentationDragIndicator(.visible)
     }
 
-    private var safetyFooter: some View {
-        VStack(alignment: .leading, spacing: YeyuSpacing.sm) {
-            Divider().overlay(Color.white.opacity(0.08))
-                .padding(.bottom, YeyuSpacing.sm)
-            Text("本应用不提供医疗建议，不替代专业心理咨询或危机干预服务。")
-                .font(.system(size: 12))
-                .foregroundStyle(Color.white.opacity(0.3))
-                .lineSpacing(4)
-            HStack(spacing: 6) {
-                Text("危机支持热线")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.white.opacity(0.3))
-                Link("400-161-9995（24 小时）", destination: URL(string: CrisisGuard.hotlineURL)!)
-                    .font(.system(size: 12))
-                    .foregroundStyle(YeyuColor.primary)
-            }
-        }
+    /// 月山 hero：取首屏插画的「月亮 + 山」区域，底部渐隐融入页面（无硬边卡片感，对齐 226:2857）。
+    private var heroMoon: some View {
+        let w = screenWidth
+        let h = w * 874 / 402
+        return Color.clear
+            .frame(height: 320)
+            .overlay(
+                Image("HomeHeroBackground")
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: w, height: h)
+                    .offset(y: h * 0.04)
+            )
+            .clipped()
+            .mask(
+                LinearGradient(
+                    colors: [.black, .black, .clear],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
+    }
+
+    private var screenWidth: CGFloat {
+        #if canImport(UIKit)
+        return UIScreen.main.bounds.width
+        #else
+        return 393
+        #endif
     }
 
     private var sheetHeader: some View {
@@ -103,7 +106,7 @@ struct AboutView: View {
     }
 
     private var sheetBg: some View {
-        Color(hex: 0x161616, alpha: 0.92)
+        Color(hex: 0x161616, alpha: 0.96)
             .background(.ultraThinMaterial)
             .environment(\.colorScheme, .dark)
             .ignoresSafeArea()
