@@ -166,19 +166,11 @@ struct SideDrawerView: View {
             .accessibilityAddTraits(.isStaticText)
     }
 
-    /// 面板材质：iOS 26 用暗色 Liquid Glass（与首页输入框统一语言），更低版本回退到暗底 + ultraThinMaterial。
-    @ViewBuilder
+    /// 面板材质：暗色磨砂底，**上下通栏、无玻璃描边圈**（仅靠 trailing 1px 右描边分隔）。
+    /// 注：不用 `.glassEffect` —— Liquid Glass 会沿形状画一圈高光描边，与设计「只在右侧有描边」冲突。
     private var panelSurface: some View {
-        if #available(iOS 26.0, *) {
-            Color.clear
-                .glassEffect(
-                    .regular.tint(YeyuColor.backgroundDrawer.opacity(0.5)),
-                    in: Rectangle()
-                )
-        } else {
-            YeyuColor.backgroundDrawer.opacity(0.92)
-                .background(.ultraThinMaterial)
-        }
+        YeyuColor.backgroundDrawer.opacity(0.92)
+            .background(.ultraThinMaterial)
     }
 
     // MARK: 会员 Banner（226:2407）
