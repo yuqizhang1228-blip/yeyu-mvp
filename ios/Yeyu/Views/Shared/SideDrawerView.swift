@@ -180,48 +180,15 @@ struct SideDrawerView: View {
             // TODO: 接入二级「会员转化」弹窗（YUQI 后补）；当前占位提示。
             showSupportToast = true
         } label: {
-            ZStack(alignment: .leading) {
-                bannerArt
-                Text("成为会员")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.white)
-                    .padding(.leading, 172)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 72)
-            .background(Color(hex: 0x282828))
-            .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
+            // 切图（含「成为会员」文案）：等比铺满内容宽，圆角裁切
+            Image("MembershipBanner")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .clipShape(RoundedRectangle(cornerRadius: YeyuRadius.lg))
         }
         .buttonStyle(.plain)
         .accessibilityLabel("成为会员")
-    }
-
-    /// 月 + 双山插画（原生绘制，对齐 226:2407 的月/山母题；暗海层近黑省略）。
-    private var bannerArt: some View {
-        ZStack {
-            Circle()
-                .fill(LinearGradient(
-                    colors: [Color(hex: 0xEDEDED), Color(hex: 0x6B6B6B)],
-                    startPoint: .top, endPoint: .bottom))
-                .frame(width: 80, height: 80)
-                .offset(x: 0, y: 17)
-            BannerTriangle()
-                .fill(LinearGradient(
-                    colors: [Color(hex: 0x8E8E8E), Color(hex: 0x3A3A3A)],
-                    startPoint: .top, endPoint: .bottom))
-                .frame(width: 98, height: 50)
-                .offset(x: -10, y: 24)
-                .opacity(0.85)
-            BannerTriangle()
-                .fill(LinearGradient(
-                    colors: [Color(hex: 0x7C7C7C), Color(hex: 0x343434)],
-                    startPoint: .top, endPoint: .bottom))
-                .frame(width: 52, height: 30)
-                .offset(x: 36, y: 33)
-                .opacity(0.85)
-        }
-        .frame(width: 150, height: 72)
-        .clipped()
     }
 
     private func navRow(icon: String, label: String, action: @escaping () -> Void) -> some View {
@@ -243,18 +210,6 @@ struct SideDrawerView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// 等腰三角（顶点居中朝上）— 会员 Banner 的「山」。
-private struct BannerTriangle: Shape {
-    func path(in rect: CGRect) -> Path {
-        Path { p in
-            p.move(to: CGPoint(x: rect.midX, y: rect.minY))
-            p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-            p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-            p.closeSubpath()
-        }
     }
 }
 
