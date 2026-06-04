@@ -85,3 +85,37 @@ enum ChipService {
         return String(t.prefix(maxChars - 1)) + "…"
     }
 }
+
+/// 快捷话题缓存：按「时段 + 当天」缓存，命中则首页秒显、不再调用 API；
+/// 时段切换（如上午→午后）或跨天才重新生成，兼顾「不每次刷新」与「贴合当前时段」。
+private struct ChipCacheData: Codable {
+    let labels: [String]
+    let period: String
+    let date: Date
+}
+
+enum ChipCache {
+    private static let key = "yeyu_chip_cache"
+
+    /// 返回当前时段当天可用的缓存；无/过期/跨时段返回 nil。
+    static func validLabels(for period: String) -> [String]? {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let c = try? JSONDecoder().decode(ChipCacheData.self, from: data),
+              c.period == period,
+              Calendar.current.isDateInToday(c.date),
+              !c.labels.isEmpty else { return nil }
+        return c.labels
+    }
+
+    static func save(labels: [String], period: String) {
+        guard !labels.isEmpty else { return }
+        let c = ChipCacheData(labels: labels, period: period, date: .now)
+        if let data = try? JSONEncoder().encode(c) {
+            UserDefaults.standard.set(data, forKey: key)
+        }
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}

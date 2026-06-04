@@ -13,6 +13,8 @@ enum DataResetService {
             UserDefaults.standard.removeObject(forKey: key)
         }
         UserProfileService.clear()
+        MemoryStore.clear()
+        ChipCache.clear()
     }
 
     private static func deleteAll<T: PersistentModel>(_ type: T.Type, in context: ModelContext) throws {

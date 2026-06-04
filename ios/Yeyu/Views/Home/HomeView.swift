@@ -9,9 +9,16 @@ struct HomeView: View {
     @Environment(AppState.self) private var appState
     @AppStorage(YeyuUser.usernameKey) private var username = ""
     @State private var input = ""
-    @State private var chipLabels: [String] = []
-    @State private var chipsLoading = true
+    @State private var chipLabels: [String]
+    @State private var chipsLoading: Bool
     @FocusState private var inputFocused: Bool
+
+    init() {
+        // 用缓存初始化：命中则首屏直接显示、无骨架闪烁、不触发刷新
+        let cached = ChipCache.validLabels(for: TimeContext.current().period)
+        _chipLabels = State(initialValue: cached ?? [])
+        _chipsLoading = State(initialValue: cached == nil)
+    }
 
     private var needsNameSetup: Bool {
         YeyuUser.needsNameSetup(stored: username)
@@ -216,10 +223,18 @@ struct HomeView: View {
     // MARK: 逻辑
 
     private func loadChips() async {
+        let period = TimeContext.current().period
+        // 命中缓存（同时段、当天）→ 秒显、不刷新、不调用 API
+        if let cached = ChipCache.validLabels(for: period) {
+            chipLabels = cached
+            chipsLoading = false
+            return
+        }
         chipsLoading = true
         let labels = await ChipService.generateLabels(username: username)
         chipLabels = labels
         chipsLoading = false
+        ChipCache.save(labels: labels, period: period)
     }
 
     private func startChat(with text: String) {
