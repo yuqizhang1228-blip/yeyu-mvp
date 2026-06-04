@@ -159,7 +159,8 @@ struct HomeView: View {
     @ViewBuilder
     private var chipSection: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: YeyuSpacing.sm) {
+            // 卡间距 12（对齐 411:2024 改版：x=0/173/346，161 宽 → 间距 12）
+            HStack(spacing: YeyuSpacing.md) {
                 if chipsLoading {
                     ForEach(0..<3, id: \.self) { _ in
                         promptCardBackground
