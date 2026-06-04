@@ -15,17 +15,20 @@ struct SideDrawerView: View {
     @State private var showSupportToast = false
 
     var body: some View {
-        if appState.drawerOpen {
-            ZStack(alignment: .leading) {
+        // 动画驱动放在「常驻」的 ZStack 上：之前把 .animation 放在 if 内，
+        // 关闭时整块（含 .animation）被移除 → 收起瞬移、没有体感。常驻后开/合都走过渡。
+        ZStack(alignment: .leading) {
+            if appState.drawerOpen {
                 Color.black.opacity(0.5)
                     .ignoresSafeArea()
+                    .transition(.opacity)
                     .onTapGesture { appState.drawerOpen = false }
 
                 drawerPanel
                     .transition(.move(edge: .leading))
             }
-            .animation(.easeOut(duration: 0.25), value: appState.drawerOpen)
         }
+        .animation(.spring(response: 0.38, dampingFraction: 0.88), value: appState.drawerOpen)
     }
 
     private var drawerPanel: some View {
