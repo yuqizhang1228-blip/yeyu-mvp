@@ -27,11 +27,12 @@ struct ChatView: View {
     /// AI 输出 <choices> 标签时解析到此，驱动 ChoiceGuideView 显示
     @State private var pendingChoices: [String]? = nil
     @State private var streamingText: String?
+    @FocusState private var inputFocused: Bool
 
     private let api = ChatAPIClient()
 
     private var inputPlaceholder: String {
-        savedCard != nil ? "还有什么想聊的…" : "说点什么…"
+        savedCard != nil ? "还有什么想聊的…" : "随便聊聊..."
     }
 
     private var sheetCard: ParsedActionCard? {
@@ -103,38 +104,31 @@ struct ChatView: View {
         }
     }
 
+    /// 顶栏 — Figma `226:2479` Nav bar：左 Menu 24 + 右 icon/add 24，无居中文案。
     private var chatHeader: some View {
         HStack {
             Button { appState.openDrawer() } label: {
-                VStack(alignment: .leading, spacing: 5) {
-                    Rectangle().frame(width: 20, height: 1.5)
-                    Rectangle().frame(width: 14, height: 1.5)
-                    Rectangle().frame(width: 20, height: 1.5)
-                }
-                .foregroundStyle(YeyuColor.textPrimary)
+                YeyuNavMenuIcon()
+                    .frame(width: 44, height: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel("打开菜单")
 
             Spacer()
-
-            if !sortedMessages.isEmpty {
-                Text("\(userTurnCount) 轮")
-                    .font(YeyuTypography.caption)
-                    .foregroundStyle(YeyuColor.textTertiary)
-            }
 
             Button {
                 Task { await startNewChat() }
             } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(YeyuColor.textPrimary)
-                    .frame(width: 36, height: 36)
+                YeyuNavAddIcon()
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
             }
             .disabled(isLoading)
+            .opacity(isLoading ? 0.4 : 1)
             .accessibilityLabel("新建对话")
         }
         .padding(.horizontal, YeyuSpacing.xl)
-        .padding(.vertical, YeyuSpacing.sm)
+        .padding(.vertical, YeyuNavBarIcon.barVerticalPadding)
     }
 
     private var messageList: some View {
@@ -164,6 +158,7 @@ struct ChatView: View {
                 .padding(.horizontal, YeyuSpacing.xl)
                 .padding(.vertical, YeyuSpacing.lg)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: session?.messages.count ?? 0) { _, _ in
                 scrollToBottom(proxy: proxy)
             }
@@ -180,32 +175,17 @@ struct ChatView: View {
         !input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// 对话输入框 — 与首页统一的液态玻璃输入盒（Figma 414:2187）。
+    /// 对话输入框 — Figma `414:2187` input box
     private var inputBar: some View {
         VStack(spacing: YeyuSpacing.md) {
-            VStack(alignment: .leading, spacing: YeyuSpacing.lg) {
-                TextField(
-                    "",
-                    text: $input,
-                    prompt: Text(inputPlaceholder).foregroundStyle(YeyuColor.textPlaceholder0515),
-                    axis: .vertical
-                )
-                .lineLimit(1...4)
-                .font(YeyuTypography.body)
-                .foregroundStyle(.white)
-                .tint(YeyuColor.primary)
-                .submitLabel(.send)
-                .onSubmit(sendCurrentInput)
-                .frame(minHeight: 22, alignment: .topLeading)
-
-                HStack(spacing: 0) {
-                    modelIcon
-                    Spacer(minLength: YeyuSpacing.md)
-                    sendButton
-                }
-            }
-            .padding(YeyuSpacing.md)
-            .yeyuGlass(cornerRadius: YeyuRadius.promptCard, interactive: true)
+            YeyuInputBox(
+                text: $input,
+                placeholder: inputPlaceholder,
+                focus: $inputFocused,
+                isLoading: isLoading,
+                submitLabel: .return,
+                onSend: sendCurrentInput
+            )
             .padding(.horizontal, YeyuSpacing.xl)
 
             Text("本功能无法代替专业心理咨询或医学治疗")
@@ -216,60 +196,20 @@ struct ChatView: View {
         .padding(.top, YeyuSpacing.sm)
     }
 
-    /// 模型 icon（占位视觉，与首页一致；模型切换为非 P0）
-    private var modelIcon: some View {
-        ZStack {
-            Circle().fill(YeyuColor.iconModelBackground)
-            Image(systemName: "plus")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(YeyuColor.iconModelGlyph)
-        }
-        .frame(width: 31, height: 31)
-        .accessibilityHidden(true)
-    }
-
-    /// 语音/发送 — 有输入且非加载中切为发送箭头，否则语音占位。
-    private var sendButton: some View {
-        Button(action: sendCurrentInput) {
-            ZStack {
-                Circle().fill(YeyuColor.iconVoiceBackground)
-                Group {
-                    if hasInput {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(YeyuColor.iconVoiceGlyph)
-                            .transition(.scale.combined(with: .opacity))
-                    } else {
-                        VoiceWaveform(color: YeyuColor.iconVoiceGlyph)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                }
-            }
-            .frame(width: 31, height: 31)
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
-            .opacity(isLoading ? 0.4 : 1)
-        }
-        .disabled(!hasInput || isLoading)
-        .animation(.easeInOut(duration: 0.18), value: hasInput)
-        .accessibilityLabel(hasInput ? "发送" : "语音输入")
-        .padding(.trailing, -6.5)
-    }
-
     private func sendCurrentInput() {
         guard hasInput, !isLoading else { return }
         let text = input
         input = ""
         pendingChoices = nil
+        inputFocused = false
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
         Task { await sendUserMessage(text) }
     }
 
     private var sortedMessages: [ChatMessage] {
         (session?.messages ?? []).sorted { $0.createdAt < $1.createdAt }
-    }
-
-    private var userTurnCount: Int {
-        sortedMessages.filter { $0.messageRole == .user }.count
     }
 
     private var messagesForAPI: [ChatMessage] {

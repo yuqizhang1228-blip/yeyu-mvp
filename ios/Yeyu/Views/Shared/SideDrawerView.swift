@@ -43,14 +43,9 @@ struct SideDrawerView: View {
                 }
                 Spacer()
                 Button { appState.drawerOpen = false } label: {
-                    VStack(alignment: .trailing, spacing: 5) {
-                        Rectangle().frame(width: 20, height: 1.5)
-                        Rectangle().frame(width: 14, height: 1.5)
-                        Rectangle().frame(width: 20, height: 1.5)
-                    }
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44, alignment: .topTrailing)
-                    .contentShape(Rectangle())
+                    YeyuNavMenuIcon(tint: .white)
+                        .frame(width: 44, height: 44, alignment: .topTrailing)
+                        .contentShape(Rectangle())
                 }
                 .accessibilityLabel("收起菜单")
                 .padding(.trailing, -((44 - 20) / 2))

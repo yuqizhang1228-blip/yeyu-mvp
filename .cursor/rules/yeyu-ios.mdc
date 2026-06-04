@@ -29,6 +29,11 @@ alwaysApply: false
 
 - 功能以 **`ios/DRAWER_SCOPE.md`** 为准（= 当前实现）；对齐 YUQ-30/0515 **勿擅自扩入口**；设计多出的项非永久不做，需单独立项。
 
+## 图标
+
+- 顶栏 Menu / 新建（`226:2479`）等 **必须用 Figma 导出资源**（`NavIconMenu` / `NavIconAdd` + `YeyuNavBarIcons`），禁止 SF Symbol 或 Rectangle 自绘替代。
+- 底部输入框（`414:2187`）用 `YeyuInputBox` + `InputIconModel` / `InputIconVoice`；禁止自绘波形或 SF `plus` 替代模型/语音 icon。
+
 ## 禁止
 
 - 引入 RN / UIKit _storyboard 主流程

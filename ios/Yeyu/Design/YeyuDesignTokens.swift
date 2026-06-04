@@ -73,6 +73,8 @@ enum YeyuSpacing {
     static let xs: CGFloat = 4
     static let sm: CGFloat = 8
     static let md: CGFloat = 12
+    /// `input box` 文案行与底部 icon 行间距（Figma `414:2187` gap-y 19）
+    static let inputBoxRowGap: CGFloat = 19
     static let lg: CGFloat = 16
     static let xl: CGFloat = 20
     static let xxl: CGFloat = 24
@@ -92,6 +94,8 @@ enum YeyuTypography {
     static let caption: Font = .system(size: 10)
     static let footnote: Font = .system(size: 12)
     static let body: Font = .system(size: 14)
+    /// Body/M · 14pt / line-height 1.6（`414:2187` 占位与输入）
+    static let bodyInputLineSpacing: CGFloat = 8.4
     static let callout: Font = .system(size: 16)
     static let title: Font = .system(size: 22, weight: .semibold)
     /// 0515 首页主标题量级（26pt）；v1.1 换问候区时启用
@@ -135,5 +139,64 @@ extension View {
                         .stroke(Color.white.opacity(0.5), lineWidth: 1)
                 )
         }
+    }
+
+    /// 底部玻璃输入框（Figma `414:2187` / `411:2006`）：93° 渐变 + 1px 白描边 + 圆角 24。
+    @ViewBuilder
+    func yeyuInputBoxGlass(cornerRadius: CGFloat = YeyuRadius.promptCard) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: cornerRadius))
+        } else {
+            self
+                .background(
+                    LinearGradient(
+                        colors: [YeyuColor.inputGlassTop, YeyuColor.inputGlassBottom],
+                        startPoint: UnitPoint(x: 0.0, y: 0.02),
+                        endPoint: UnitPoint(x: 1.0, y: 0.0)
+                    ),
+                    in: RoundedRectangle(cornerRadius: cornerRadius)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(YeyuColor.borderInput0515, lineWidth: 1)
+                )
+        }
+    }
+}
+
+// MARK: 0515 输入框内 icon（Figma `414:2189` / `414:2194`）
+
+enum YeyuInputBoxIcon {
+    static let size: CGFloat = 31
+}
+
+/// 模型 icon（Figma `模型icon` · 31×31）：白 10% 圆底 + #D9D9D9 加号。
+/// 原生绘制——导出 SVG 用 `fill="var(--fill-0,…)"`，Xcode 资源目录不支持 CSS 变量，真机会不可见。
+struct YeyuInputModelIcon: View {
+    var body: some View {
+        ZStack {
+            Circle().fill(YeyuColor.iconModelBackground)
+            Capsule().fill(YeyuColor.iconModelGlyph).frame(width: 13, height: 1.6)
+            Capsule().fill(YeyuColor.iconModelGlyph).frame(width: 1.6, height: 13)
+        }
+        .frame(width: YeyuInputBoxIcon.size, height: YeyuInputBoxIcon.size)
+        .accessibilityHidden(true)
+    }
+}
+
+/// 语音 icon（Figma `语音icon` · 31×31）：#F9F9F9 圆底 + #212121 四段波形。原生绘制（同上原因）。
+struct YeyuInputVoiceIcon: View {
+    private let heights: [CGFloat] = [5, 13, 8, 5]
+    var body: some View {
+        ZStack {
+            Circle().fill(YeyuColor.iconVoiceBackground)
+            HStack(alignment: .center, spacing: 3) {
+                ForEach(heights.indices, id: \.self) { i in
+                    Capsule().fill(YeyuColor.iconVoiceGlyph).frame(width: 1.6, height: heights[i])
+                }
+            }
+        }
+        .frame(width: YeyuInputBoxIcon.size, height: YeyuInputBoxIcon.size)
+        .accessibilityHidden(true)
     }
 }

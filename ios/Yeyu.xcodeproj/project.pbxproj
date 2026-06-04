@@ -44,6 +44,8 @@
 		A10000000000000000000034 /* LanguageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000034 /* LanguageView.swift */; };
 		A10000000000000000000035 /* PersonalizationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000035 /* PersonalizationView.swift */; };
 		A10000000000000000000036 /* ChoicesParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000036 /* ChoicesParser.swift */; };
+		A10000000000000000000037 /* YeyuNavBarIcons.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000037 /* YeyuNavBarIcons.swift */; };
+		A10000000000000000000038 /* YeyuInputBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000038 /* YeyuInputBox.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -84,6 +86,8 @@
 		B10000000000000000000034 /* LanguageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LanguageView.swift; sourceTree = "<group>"; };
 		B10000000000000000000035 /* PersonalizationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalizationView.swift; sourceTree = "<group>"; };
 		B10000000000000000000036 /* ChoicesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChoicesParser.swift; sourceTree = "<group>"; };
+		B10000000000000000000037 /* YeyuNavBarIcons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YeyuNavBarIcons.swift; sourceTree = "<group>"; };
+		B10000000000000000000038 /* YeyuInputBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = YeyuInputBox.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* Yeyu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yeyu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -141,6 +145,7 @@
 			isa = PBXGroup;
 			children = (
 				B10000000000000000000003 /* YeyuDesignTokens.swift */,
+				B10000000000000000000037 /* YeyuNavBarIcons.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -245,6 +250,7 @@
 		E10000000000000000000015 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				B10000000000000000000038 /* YeyuInputBox.swift */,
 				B10000000000000000000012 /* SideDrawerView.swift */,
 				B10000000000000000000013 /* CrisisSheetView.swift */,
 			);
@@ -350,6 +356,8 @@
 				A10000000000000000000034 /* LanguageView.swift in Sources */,
 				A10000000000000000000035 /* PersonalizationView.swift in Sources */,
 				A10000000000000000000036 /* ChoicesParser.swift in Sources */,
+				A10000000000000000000037 /* YeyuNavBarIcons.swift in Sources */,
+				A10000000000000000000038 /* YeyuInputBox.swift in Sources */,
 				A10000000000000000000018 /* TimeContext.swift in Sources */,
 				A10000000000000000000019 /* ChipService.swift in Sources */,
 				A10000000000000000000020 /* ChoiceGuideView.swift in Sources */,

@@ -1,4 +1,7 @@
 import SwiftUI
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// 首页（YUQ-27 高保真 · Figma 0515 `page/home` 411:1996）
 /// 结构：背景插画 + 渐变 → 顶栏 → 两行问候 → 横向快捷话题 → 玻璃输入框 → 合规一行。
@@ -92,14 +95,9 @@ struct HomeView: View {
                 inputFocused = false
                 appState.openDrawer()
             } label: {
-                VStack(alignment: .leading, spacing: 5) {
-                    Rectangle().frame(width: 20, height: 1.5)
-                    Rectangle().frame(width: 14, height: 1.5)
-                    Rectangle().frame(width: 20, height: 1.5)
-                }
-                .foregroundStyle(YeyuColor.textTitle)
-                .frame(width: 44, height: 44, alignment: .leading)
-                .contentShape(Rectangle())
+                YeyuNavMenuIcon()
+                    .frame(width: 44, height: 44, alignment: .leading)
+                    .contentShape(Rectangle())
             }
             .accessibilityLabel("打开菜单")
             Spacer()
@@ -192,79 +190,18 @@ struct HomeView: View {
             )
     }
 
-    // MARK: 玻璃输入框（411:2006）
+    // MARK: 玻璃输入框（411:2006 · 与 `414:2187` 同组件）
 
     private var inputBox: some View {
-        VStack(alignment: .leading, spacing: YeyuSpacing.lg) {
-            TextField(
-                "",
-                text: $input,
-                prompt: Text("随便聊聊...").foregroundStyle(YeyuColor.textPlaceholder0515),
-                axis: .vertical
-            )
-            .lineLimit(1...4)
-            .font(YeyuTypography.body)
-            .foregroundStyle(.white)
-            .tint(YeyuColor.primary)
-            .focused($inputFocused)
-            .submitLabel(.send)
-            .onSubmit { startChat(with: input) }
-            .frame(minHeight: 22, alignment: .topLeading)
-
-            HStack(spacing: 0) {
-                modelIcon
-                Spacer(minLength: YeyuSpacing.md)
-                voiceOrSendButton
-            }
-        }
-        .padding(YeyuSpacing.md)
-        .yeyuGlass(cornerRadius: YeyuRadius.promptCard, interactive: true)
-    }
-
-    /// 模型 icon（411:2008）· 当前为占位视觉，模型切换为非 P0
-    private var modelIcon: some View {
-        ZStack {
-            Circle().fill(YeyuColor.iconModelBackground)
-            Image(systemName: "plus")
-                .font(.system(size: 14, weight: .regular))
-                .foregroundStyle(YeyuColor.iconModelGlyph)
-        }
-        .frame(width: 31, height: 31)
-        .accessibilityHidden(true)
-    }
-
-    /// 语音 icon（411:2013）· 有输入切为发送；空态点按聚焦输入框（语音为非 P0）。
-    private var voiceOrSendButton: some View {
-        Button {
-            if hasInput {
-                startChat(with: input)
-            } else {
-                inputFocused = true
-            }
-        } label: {
-            ZStack {
-                Circle().fill(YeyuColor.iconVoiceBackground)
-                Group {
-                    if hasInput {
-                        Image(systemName: "arrow.up")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(YeyuColor.iconVoiceGlyph)
-                            .transition(.scale.combined(with: .opacity))
-                    } else {
-                        VoiceWaveform(color: YeyuColor.iconVoiceGlyph)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-                }
-            }
-            .frame(width: 31, height: 31)
-            // 触控目标补足到 44pt（MASTER §3.5 / 技能 Touch Target）
-            .frame(width: 44, height: 44)
-            .contentShape(Rectangle())
-        }
-        .animation(.easeInOut(duration: 0.18), value: hasInput)
-        .accessibilityLabel(hasInput ? "发送" : "语音输入")
-        // 抵消 44pt 触控区带来的额外右侧外扩，使圆形视觉贴右（(44-31)/2 = 6.5）
-        .padding(.trailing, -6.5)
+        YeyuInputBox(
+            text: $input,
+            placeholder: "随便聊聊...",
+            focus: $inputFocused,
+            submitLabel: .send,
+            onSubmit: { startChat(with: input) },
+            onSend: { startChat(with: input) },
+            onVoiceTapWhenEmpty: { inputFocused = true }
+        )
     }
 
     // MARK: 合规一行（411:2001）
@@ -289,27 +226,15 @@ struct HomeView: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
         inputFocused = false
+        // 发送瞬间触觉反馈（与对话页一致）
+        #if canImport(UIKit)
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        #endif
         if CrisisGuard.shouldShowCrisisUI(for: trimmed) {
             appState.showCrisisSheet = true
         }
         appState.openChat(initialMessage: trimmed)
         input = ""
-    }
-}
-
-/// 语音波形（4 根胶囊，对齐 411:2013 SVG 形态）。首页与对话页输入框共用。
-struct VoiceWaveform: View {
-    let color: Color
-    private let heights: [CGFloat] = [4, 12, 7, 4]
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 3) {
-            ForEach(heights.indices, id: \.self) { i in
-                Capsule()
-                    .fill(color)
-                    .frame(width: 1.5, height: heights[i])
-            }
-        }
     }
 }
 
