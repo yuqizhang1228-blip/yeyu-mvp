@@ -122,17 +122,6 @@ struct ChatView: View {
             .accessibilityLabel("返回")
 
             Spacer()
-
-            Button {
-                Task { await startNewChat() }
-            } label: {
-                YeyuNavAddIcon()
-                    .frame(width: 44, height: 44)
-                    .contentShape(Rectangle())
-            }
-            .disabled(isLoading)
-            .opacity(isLoading ? 0.4 : 1)
-            .accessibilityLabel("新建对话")
         }
         .padding(.horizontal, YeyuSpacing.xl)
         .padding(.vertical, YeyuNavBarIcon.barVerticalPadding)
@@ -253,11 +242,6 @@ struct ChatView: View {
         )
     }
 
-    private func startNewChat() async {
-        guard !isLoading else { return }
-        await archiveCurrentSessionIfNeeded()
-        appState.goHome()
-    }
 
     private func archiveCurrentSessionIfNeeded() async {
         guard let session else { return }
