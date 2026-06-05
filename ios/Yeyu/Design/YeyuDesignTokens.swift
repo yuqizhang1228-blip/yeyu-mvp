@@ -141,6 +141,22 @@ extension View {
         }
     }
 
+    /// 深色液态玻璃（任意形状）。用于「+」上方的小气泡等浮层。
+    /// - iOS 26+：系统 Liquid Glass + 黑色 tint（暗质感）。
+    /// - iOS 17–25：暗色半透底 + ultraThinMaterial（dark）+ 1px 白描边。
+    @ViewBuilder
+    func yeyuDarkGlass<S: Shape>(in shape: S) -> some View {
+        if #available(iOS 26.0, *) {
+            self.glassEffect(.regular.tint(Color.black.opacity(0.55)), in: shape)
+        } else {
+            self
+                .background(shape.fill(Color(hex: 0x1A1A1A).opacity(0.72)))
+                .background(.ultraThinMaterial, in: shape)
+                .overlay(shape.stroke(Color.white.opacity(0.14), lineWidth: 1))
+                .environment(\.colorScheme, .dark)
+        }
+    }
+
     /// 底部玻璃输入框（Figma `414:2187` / `411:2006`）：93° 渐变 + 1px 白描边 + 圆角 24。
     @ViewBuilder
     func yeyuInputBoxGlass(cornerRadius: CGFloat = YeyuRadius.promptCard) -> some View {
@@ -161,6 +177,31 @@ extension View {
                         .stroke(YeyuColor.borderInput0515, lineWidth: 1)
                 )
         }
+    }
+}
+
+/// 朝下小尾巴的气泡形状（圆角矩形 + 底部居左三角），用于「+」上方的浮层菜单。
+struct DownTailBubble: Shape {
+    var cornerRadius: CGFloat = 14
+    var tailWidth: CGFloat = 14
+    var tailHeight: CGFloat = 8
+    /// 尾巴中心距离 leading 边的距离（对齐到「+」列）
+    var tailInset: CGFloat = 22
+
+    func path(in rect: CGRect) -> Path {
+        let body = CGRect(
+            x: rect.minX, y: rect.minY,
+            width: rect.width, height: max(0, rect.height - tailHeight)
+        )
+        var p = Path(roundedRect: body, cornerRadius: cornerRadius)
+        let cx = rect.minX + tailInset
+        var tail = Path()
+        tail.move(to: CGPoint(x: cx - tailWidth / 2, y: body.maxY - 0.5))
+        tail.addLine(to: CGPoint(x: cx, y: rect.maxY))
+        tail.addLine(to: CGPoint(x: cx + tailWidth / 2, y: body.maxY - 0.5))
+        tail.closeSubpath()
+        p.addPath(tail)
+        return p
     }
 }
 

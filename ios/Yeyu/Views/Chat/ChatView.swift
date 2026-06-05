@@ -40,6 +40,19 @@ struct ChatView: View {
         cardSheetReviewMode ? savedCard : pendingCard
     }
 
+    /// 被 push 的子页面在 `navigationBarHidden(true)` 下顶部安全区会塌缩，
+    /// 这里直接读 keyWindow 的真实状态栏高度，避免返回键侵占信息栏。
+    private var topSafeAreaInset: CGFloat {
+        #if canImport(UIKit)
+        UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .flatMap { $0.windows }
+            .first { $0.isKeyWindow }?.safeAreaInsets.top ?? 0
+        #else
+        0
+        #endif
+    }
+
     var body: some View {
         ZStack(alignment: .leading) {
             chatBackground
@@ -63,6 +76,8 @@ struct ChatView: View {
                 }
                 inputBar
             }
+            .padding(.top, topSafeAreaInset)
+            .ignoresSafeArea(.container, edges: .top)
 
             SideDrawerView(currentSessionId: sessionId)
         }

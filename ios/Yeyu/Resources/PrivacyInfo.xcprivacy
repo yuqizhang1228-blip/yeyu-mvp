@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 是否用于追踪用户：否 -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<!-- 追踪域名：无 -->
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+	<!-- 收集的数据类型：本清单不声明（以 App Store Connect 隐私标签为准） -->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array/>
+	<!-- Required Reason API 申报 -->
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!-- UserDefaults：仅读写本 App 自身数据（昵称、记忆开关、本地 uid 等） -->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

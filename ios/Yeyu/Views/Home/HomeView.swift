@@ -163,9 +163,7 @@ struct HomeView: View {
             HStack(spacing: YeyuSpacing.md) {
                 if chipsLoading {
                     ForEach(0..<3, id: \.self) { _ in
-                        promptCardBackground
-                            .frame(width: 200, height: 74)
-                            .redacted(reason: .placeholder)
+                        PromptCardSkeleton()
                     }
                 } else {
                     ForEach(chipLabels, id: \.self) { text in
@@ -205,10 +203,8 @@ struct HomeView: View {
             text: $input,
             placeholder: "随便聊聊...",
             focus: $inputFocused,
-            submitLabel: .send,
-            onSubmit: { startChat(with: input) },
-            onSend: { startChat(with: input) },
-            onVoiceTapWhenEmpty: { inputFocused = true }
+            submitLabel: .return,
+            onSend: { startChat(with: input) }
         )
     }
 

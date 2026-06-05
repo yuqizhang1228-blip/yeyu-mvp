@@ -41,6 +41,15 @@ API 默认：`https://yeyu-mvp.vercel.app/api/chat`（需网络）。
 | YUQ-48 | 昵称首访 + 设置 + 历史详情 + 错误重试 | ✅ |
 | YUQ-50 | `MONOREPO.md` + `ios/` 主工程 | ✅ |
 
+## 端打磨增量（P0 后 · 2026-06-05）
+
+> 非 P0，P0 主流程通过后的体验打磨与上架资产；状态 In Review（代码 done + 模拟器验证，待产品验收）。
+
+| Issue | 范围 | 状态 |
+|-------|------|------|
+| YUQ-53 | 返回键不压状态栏 + 键盘换行键 + 输入热区扩大 + 「+」加照片本地 OCR + 语音 toast + 首页快捷卡骨架加载态 | 🔶 In Review |
+| YUQ-54 | 上架资产·合规：App 图标 1024 + `PrivacyInfo.xcprivacy`（UserDefaults·CA92.1）+ 相机权限说明 | 🔶 In Review |
+
 ## 明确不在 P0（v1.1+）
 
 - SSE 流式（YUQ-47）
