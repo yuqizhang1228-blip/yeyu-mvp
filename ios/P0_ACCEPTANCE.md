@@ -49,6 +49,8 @@ API 默认：`https://yeyu-mvp.vercel.app/api/chat`（需网络）。
 |-------|------|------|
 | YUQ-53 | 返回键不压状态栏 + 键盘换行键 + 输入热区扩大 + 「+」加照片本地 OCR + 语音 toast + 首页快捷卡骨架加载态 | 🔶 In Review |
 | YUQ-54 | 上架资产·合规：App 图标 1024 + `PrivacyInfo.xcprivacy`（UserDefaults·CA92.1）+ 相机权限说明 | 🔶 In Review |
+| YUQ-35 | AI 思考态 loading 图标改用设计稿矢量（`ThinkingMountain` 226:2669） | 🔶 In Review |
+| YUQ-55 | 记忆增强：LLM 调和（语义去重 + 事实更新/合并）+ 实时「已加入记忆」toast + 手动增改 | 🔶 In Review |
 
 ## 明确不在 P0（v1.1+）
 

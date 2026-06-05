@@ -110,7 +110,7 @@ struct ChatView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             // 退后台也沉淀一次（用户不一定点「新对话」），按会话节流避免重复
-            if phase == .background { triggerMemoryExtraction() }
+            if phase == .background { triggerMemoryReconcile(force: true) }
         }
     }
 
@@ -302,22 +302,25 @@ struct ChatView: View {
         session.updatedAt = .now
         try? modelContext.save()
 
-        triggerMemoryExtraction()
+        triggerMemoryReconcile(force: true)
     }
 
-    /// 对话沉淀记忆（YUQ-39 闭环）。归档时 + 退后台时调用；服务内按会话节流、受开关控制。
-    /// 主线程拼纯文本，再交后台抽取，避免传递非 Sendable 的 SwiftData 模型。
-    private func triggerMemoryExtraction() {
+    /// 对话沉淀记忆（YUQ-37/39 闭环 · 调和）。每轮 AI 回复后（节流）+ 归档/退后台（force）调用；
+    /// 服务内按会话游标节流、受「参考保存记忆」开关控制。有新增/更新则弹顶部 toast。
+    /// 主线程拼纯文本快照，再交后台调和，避免传递非 Sendable 的 SwiftData 模型。
+    private func triggerMemoryReconcile(force: Bool = false) {
         guard MemoryStore.autoEnabled, let session else { return }
         let msgs = messagesForAPI
         guard msgs.contains(where: { $0.messageRole == .user }),
               msgs.contains(where: { $0.messageRole == .assistant }) else { return }
         let sid = session.id
-        guard !MemoryStore.hasExtracted(sid) else { return }
-        let transcript = msgs
-            .map { ($0.messageRole == .user ? "用户" : "AI") + "：" + $0.content }
-            .joined(separator: "\n")
-        Task { await MemoryExtractionService.extractAndStore(sessionId: sid, fromTranscript: transcript) }
+        let dialogue: [(role: String, content: String)] = msgs.map {
+            (role: $0.messageRole == .user ? "user" : "assistant", content: $0.content)
+        }
+        Task {
+            let changes = await MemoryReconcileService.reconcile(sessionId: sid, messages: dialogue, force: force)
+            if !changes.isEmpty { appState.showMemoryToast(changes) }
+        }
     }
 
     private func sendUserMessage(_ text: String) async {
@@ -424,6 +427,9 @@ struct ChatView: View {
             session.messages.append(aiMsg)
             session.updatedAt = .now
             try? modelContext.save()
+
+            // 每轮回复后增量调和记忆（节流）：捕捉到重点信息会弹顶部 toast
+            triggerMemoryReconcile()
         } catch {
             let errMsg = ChatMessage(role: .assistant, content: Self.networkErrorMessage)
             errMsg.session = session
@@ -546,8 +552,12 @@ private struct ThinkingIndicator: View {
 
     var body: some View {
         HStack(spacing: YeyuSpacing.sm) {
-            Image(systemName: "mountain.2.fill")
-                .font(.system(size: 12))
+            // 设计稿山形 icon（Figma 226:2669）：20×20 矢量模板图，白 80%
+            Image("ThinkingMountain")
+                .renderingMode(.template)
+                .resizable()
+                .scaledToFit()
+                .frame(width: 20, height: 20)
                 .foregroundStyle(Color.white.opacity(0.8))
 
             label

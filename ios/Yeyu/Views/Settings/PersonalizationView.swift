@@ -155,6 +155,8 @@ struct MemoryManagementView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var memories: [MemoryEntry] = []
     @State private var showClearConfirm = false
+    @State private var showEditor = false
+    @State private var editing: MemoryEntry?
 
     var body: some View {
         VStack(spacing: 0) {
@@ -173,6 +175,26 @@ struct MemoryManagementView: View {
             }
             Button("取消", role: .cancel) {}
         }
+        .sheet(isPresented: $showEditor) {
+            MemoryEditorView(original: editing) { text in
+                if let editing {
+                    MemoryStore.update(id: editing.id, text: text)
+                } else {
+                    MemoryStore.add(text, source: "manual")
+                }
+                memories = MemoryStore.all()
+            }
+        }
+    }
+
+    private func openAdd() {
+        editing = nil
+        showEditor = true
+    }
+
+    private func openEdit(_ entry: MemoryEntry) {
+        editing = entry
+        showEditor = true
     }
 
     @ViewBuilder
@@ -211,6 +233,8 @@ struct MemoryManagementView: View {
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                    .contentShape(Rectangle())
+                    .onTapGesture { openEdit(item) }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
                             MemoryStore.delete(item.id)
@@ -238,6 +262,14 @@ struct MemoryManagementView: View {
                         .contentShape(Rectangle())
                 }
                 Spacer()
+                Button { openAdd() } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44, alignment: .trailing)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("新增记忆")
                 Button("清空") { showClearConfirm = true }
                     .font(.system(size: 15))
                     .foregroundStyle(memories.isEmpty ? YeyuColor.textTertiary : YeyuColor.error)
