@@ -12,7 +12,7 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
-// 复用 api/chat.js 的代理逻辑（含 DEEPSEEK_API_KEY 引用）
+// 复用 api/chat.js 的代理逻辑（含 DASHSCOPE_API_KEY 引用）
 app.post('/api/chat', (req, res) => chatHandler(req, res));
 
 // 静态托管整个目录，默认入口 index.html
@@ -21,7 +21,7 @@ app.use(express.static(__dirname, { index: 'index.html' }));
 // 端口绑定失败时给出清晰提示
 app.listen(PORT, () => {
   console.log(`✅ 夜屿本地预览已启动: http://localhost:${PORT}`);
-  console.log(`   DEEPSEEK_API_KEY: ${process.env.DEEPSEEK_API_KEY ? '已设置 ✓' : '未设置 ✗'}`);
+  console.log(`   DASHSCOPE_API_KEY: ${process.env.DASHSCOPE_API_KEY ? '已设置 ✓' : '未设置 ✗'}`);
 }).on('error', (err) => {
   if (err.code === 'EADDRINUSE') {
     console.error(`[ERROR] 端口 ${PORT} 已被占用，请先执行: lsof -ti :${PORT} | xargs kill -9`);

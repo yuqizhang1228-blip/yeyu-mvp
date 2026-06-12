@@ -25,7 +25,7 @@ npm install braintrust
 
 ```bash
 BRAINTRUST_API_KEY="你的 braintrust api key"
-DEEPSEEK_API_KEY="你的 deepseek api key"
+DASHSCOPE_API_KEY="你的通义千问 api key"
 BRAINTRUST_PROJECT="yeyu_test"
 
 # 选择测试集：smoke（快）或 regression（更全面）

@@ -50,6 +50,8 @@
 		A10000000000000000000042 /* ImageTextRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000042 /* ImageTextRecognizer.swift */; };
 		A10000000000000000000041 /* CameraPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000041 /* CameraPicker.swift */; };
 		A10000000000000000000043 /* PromptCardSkeleton.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000043 /* PromptCardSkeleton.swift */; };
+		A10000000000000000000044 /* MemoryToastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000044 /* MemoryToastView.swift */; };
+		A10000000000000000000045 /* MemoryEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B10000000000000000000045 /* MemoryEditorView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -96,6 +98,8 @@
 		B10000000000000000000042 /* ImageTextRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageTextRecognizer.swift; sourceTree = "<group>"; };
 		B10000000000000000000041 /* CameraPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPicker.swift; sourceTree = "<group>"; };
 		B10000000000000000000043 /* PromptCardSkeleton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptCardSkeleton.swift; sourceTree = "<group>"; };
+		B10000000000000000000044 /* MemoryToastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryToastView.swift; sourceTree = "<group>"; };
+		B10000000000000000000045 /* MemoryEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoryEditorView.swift; sourceTree = "<group>"; };
 		C10000000000000000000001 /* Yeyu.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Yeyu.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -265,6 +269,8 @@
 				B10000000000000000000013 /* CrisisSheetView.swift */,
 				B10000000000000000000041 /* CameraPicker.swift */,
 				B10000000000000000000043 /* PromptCardSkeleton.swift */,
+				B10000000000000000000044 /* MemoryToastView.swift */,
+				B10000000000000000000045 /* MemoryEditorView.swift */,
 			);
 			path = Shared;
 			sourceTree = "<group>";
@@ -387,6 +393,8 @@
 				A10000000000000000000042 /* ImageTextRecognizer.swift in Sources */,
 				A10000000000000000000041 /* CameraPicker.swift in Sources */,
 				A10000000000000000000043 /* PromptCardSkeleton.swift in Sources */,
+				A10000000000000000000044 /* MemoryToastView.swift in Sources */,
+				A10000000000000000000045 /* MemoryEditorView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

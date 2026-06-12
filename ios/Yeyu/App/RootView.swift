@@ -16,6 +16,13 @@ struct RootView: View {
                 }
         }
         .environment(appState)
+        // 记忆 toast — 顶部全局气泡，置于导航栈之上
+        .overlay(alignment: .top) {
+            if let toast = appState.memoryToast {
+                MemoryToastView(toast: toast)
+            }
+        }
+        .animation(.spring(response: 0.42, dampingFraction: 0.85), value: appState.memoryToast)
         // 设置页 — 以大弹窗呈现，不进导航栈
         .sheet(isPresented: Binding(
             get: { appState.showSettings },

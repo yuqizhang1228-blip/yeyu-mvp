@@ -20,7 +20,7 @@
 |----|------|------|
 | H5 验证 | 单文件 HTML/CSS/JS | `index.html` |
 | iOS 客户端 | **SwiftUI + SwiftData**（iOS 17+） | `ios/` |
-| API | Vercel / Express 代理 DeepSeek | `api/chat.js` |
+| API | Vercel / Express 代理通义千问 | `api/chat.js` |
 | Prompt 源 | Markdown 归档 | `prompts/` → iOS Bundle |
 | 评测 | Braintrust eval | `evals/` |
 

@@ -94,6 +94,15 @@ struct MemoryEntry: Codable, Identifiable, Equatable {
     var text: String
     var createdAt: Date = .now
     var source: String = "auto"   // "auto" | "manual"
+    /// 事实更新/合并或手动编辑时间（「已更新」语义 + 排序）；首次创建为 nil。
+    var updatedAt: Date? = nil
+}
+
+/// 一次调和产生的变更（供顶部 toast）。
+struct MemoryChange: Equatable {
+    enum Kind { case added, updated }
+    let kind: Kind
+    let entry: MemoryEntry
 }
 
 /// 本地记忆库（独立 UserDefaults 键，避免改 `UserProfile` 触发解码迁移）。
@@ -118,16 +127,31 @@ enum MemoryStore {
         }
     }
 
+    /// 新增一条；精确重复或过短返回 nil（兜底去重，语义去重由调和 LLM 负责）。
     @discardableResult
-    static func add(_ text: String, source: String = "auto") -> Bool {
+    static func add(_ text: String, source: String = "auto") -> MemoryEntry? {
         let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard t.count >= 4 else { return false }
+        guard t.count >= 4 else { return nil }
         var items = all()
         let norm = normalize(t)
-        guard !items.contains(where: { normalize($0.text) == norm }) else { return false }
-        items.insert(MemoryEntry(text: t, source: source), at: 0)
+        guard !items.contains(where: { normalize($0.text) == norm }) else { return nil }
+        let entry = MemoryEntry(text: t, source: source)
+        items.insert(entry, at: 0)
         persist(Array(items.prefix(maxCount)))
-        return true
+        return entry
+    }
+
+    /// 更新某条文本（事实更新/合并 或 手动编辑）。返回更新后的 entry；id 不存在返回 nil。
+    @discardableResult
+    static func update(id: UUID, text: String) -> MemoryEntry? {
+        let t = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard t.count >= 4 else { return nil }
+        var items = all()
+        guard let idx = items.firstIndex(where: { $0.id == id }) else { return nil }
+        items[idx].text = t
+        items[idx].updatedAt = .now
+        persist(items)
+        return items[idx]
     }
 
     static func delete(_ id: UUID) {
@@ -146,24 +170,37 @@ enum MemoryStore {
         return "【关于对方的长期记忆——自然融入即可，别主动复述、别让对方觉得被监视；与当前话题无关就忽略】\n\(list)"
     }
 
-    // MARK: 抽取节流（按会话去重，避免重复/频繁调用）
+    // MARK: 调和节流游标（按会话记录「已处理到的消息数」，每轮只发增量）
 
-    private static let extractedKey = "yeyu_mem_extracted_sessions"
+    private static let cursorKey = "yeyu_mem_cursor"
 
-    static func hasExtracted(_ sessionId: UUID) -> Bool {
-        extractedSet().contains(sessionId.uuidString)
+    struct ReconcileCursor: Codable {
+        var processedCount: Int = 0
+        var lastAt: Date? = nil
     }
 
-    static func markExtracted(_ sessionId: UUID) {
-        var set = extractedSet()
-        set.insert(sessionId.uuidString)
-        var arr = Array(set)
-        if arr.count > 200 { arr = Array(arr.suffix(200)) }
-        UserDefaults.standard.set(arr, forKey: extractedKey)
+    static func cursor(_ sessionId: UUID) -> ReconcileCursor {
+        guard let data = UserDefaults.standard.data(forKey: cursorKey),
+              let map = try? JSONDecoder().decode([String: ReconcileCursor].self, from: data),
+              let c = map[sessionId.uuidString] else { return ReconcileCursor() }
+        return c
     }
 
-    private static func extractedSet() -> Set<String> {
-        Set(UserDefaults.standard.stringArray(forKey: extractedKey) ?? [])
+    static func setCursor(_ sessionId: UUID, _ cursor: ReconcileCursor) {
+        var map: [String: ReconcileCursor] = {
+            guard let data = UserDefaults.standard.data(forKey: cursorKey),
+                  let m = try? JSONDecoder().decode([String: ReconcileCursor].self, from: data) else { return [:] }
+            return m
+        }()
+        map[sessionId.uuidString] = cursor
+        // 控量：最多保留 200 个会话游标
+        if map.count > 200 {
+            let keep = map.sorted { ($0.value.lastAt ?? .distantPast) > ($1.value.lastAt ?? .distantPast) }.prefix(200)
+            map = Dictionary(uniqueKeysWithValues: keep.map { ($0.key, $0.value) })
+        }
+        if let data = try? JSONEncoder().encode(map) {
+            UserDefaults.standard.set(data, forKey: cursorKey)
+        }
     }
 
     /// 精确归一化去重（去空格/句号、小写）。语义级去重见难度评估，暂不做。
@@ -175,57 +212,149 @@ enum MemoryStore {
     }
 }
 
-/// 对话 → 记忆抽取（YUQ-39 闭环的「沉淀」环节）。
-/// 在一段对话收束时调用；仅在「参考保存记忆」开启时写入。
-enum MemoryExtractionService {
-    /// 抽取提示词走正规流程：`prompts/memory_extraction.md` → bundle；缺失时回退内联。
+/// 对话 → 记忆「调和」（YUQ-37/39 闭环的「沉淀」环节）。
+/// 每轮 AI 回复后（节流）调用：把「现有记忆 + 增量对话」交给 LLM，
+/// 返回结构化 {add, update} —— 一次完成语义去重 + 事实更新/合并。
+/// 仅在「参考保存记忆」开启时写入。
+enum MemoryReconcileService {
+    /// 单次最少新增对话字数（低于则跳过，控成本）
+    private static let minNewChars = 40
+    /// 发给模型的现有记忆上限 / 增量对话上限
+    private static let maxExistingForPrompt = 30
+    private static let maxDialogueChars = 3000
+
+    /// 防止同会话并发调和（避免重复写入）
+    @MainActor private static var inFlight: Set<UUID> = []
+
     private static var systemPrompt: String {
         let loaded = PromptLoader.load("memory_extraction")
         return loaded.isEmpty ? inlineFallback : loaded
     }
 
     private static let inlineFallback = """
-    你是一个「用户长期记忆」抽取器。下面是用户与一个情绪陪伴 AI 的一段对话。
-    请只抽取关于「用户本人」长期稳定、值得长期记住的事实或处境，例如：职业/身份、长期目标、反复出现的核心困扰、重要关系、明确的价值观或偏好。
+    你是一个「用户长期记忆」调和器。给你 A=该用户已有的长期记忆（带编号），B=最近一段用户与情绪陪伴 AI 的对话。
+    只关注关于「用户本人」长期稳定、值得长期记住的事实或处境（职业/身份、长期目标、反复出现的核心困扰、重要关系、明确价值观或偏好）。
+    请输出对记忆库的「操作」：
+    - add：B 中出现、A 里没有（语义上也没有）的新长期事实。
+    - update：B 中的信息是对 A 中某条的更新/纠正（如换了工作、目标变化），给出该条编号与新文本。
     严格要求：
-    - 不要抽取一次性的情绪、寒暄、客套，或只在本次对话里成立的临时状态。
-    - 每条一句话，用第三人称「用户……」，尽量简洁具体。
-    - 如果没有值得长期记住的，返回空数组 []。
-    - 只输出 JSON 字符串数组本身，例如 ["用户是一名UX设计师","用户正在思考职业方向"]，禁止任何解释或额外文字。
+    - 不要 add 与 A 语义重复的内容（即使措辞不同）。这是去重的关键。
+    - 不要抽取一次性情绪、寒暄、客套或仅本次成立的临时状态。
+    - 每条一句话，第三人称「用户……」，简洁具体。
+    - 没有任何操作就返回 {"add":[],"update":[]}。
+    - 只输出 JSON 对象本身，例如 {"add":["用户在准备考研"],"update":[{"index":2,"text":"用户现在在一家创业公司做设计"}]}，禁止任何解释或额外文字。
     """
 
-    /// 按会话节流：同一会话只抽一次（在网络调用前标记，避免归档+退后台双触发重复扣费）。
-    static func extractAndStore(sessionId: UUID, fromTranscript transcript: String) async {
-        guard MemoryStore.autoEnabled, !MemoryStore.hasExtracted(sessionId) else { return }
-        let convo = transcript.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard convo.count >= 60 else { return }
-        MemoryStore.markExtracted(sessionId)
+    /// 调和并写入。`messages` 为该会话按时序的 (role, content)（role: "user"/"assistant"）。
+    /// 返回本次产生的变更（供顶部 toast）。`force=true` 跳过「最少字数」节流（用于会话结束兜底）。
+    @discardableResult
+    static func reconcile(
+        sessionId: UUID,
+        messages: [(role: String, content: String)],
+        force: Bool = false
+    ) async -> [MemoryChange] {
+        guard MemoryStore.autoEnabled else { return [] }
+
+        // 并发守卫
+        let proceed = await MainActor.run { () -> Bool in
+            if inFlight.contains(sessionId) { return false }
+            inFlight.insert(sessionId)
+            return true
+        }
+        guard proceed else { return [] }
+        defer { Task { @MainActor in inFlight.remove(sessionId) } }
+
+        // 增量切片
+        var cursor = MemoryStore.cursor(sessionId)
+        let start = min(cursor.processedCount, messages.count)
+        let newSlice = Array(messages[start...])
+        guard !newSlice.isEmpty else { return [] }
+        let newText = newSlice.map { $0.content }.joined()
+        guard force || newText.count >= minNewChars else { return [] }
+
+        let existing = Array(MemoryStore.all().prefix(maxExistingForPrompt))
+        let userPrompt = buildPrompt(existing: existing, dialogue: newSlice)
+
         let client = ChatAPIClient()
+        let raw: String
         do {
-            let raw = try await client.send(
-                messages: [.init(role: "user", content: String(convo.prefix(4000)))],
+            raw = try await client.send(
+                messages: [.init(role: "user", content: userPrompt)],
                 systemPrompt: systemPrompt,
                 extraSystemMessages: [],
-                maxTokens: 300
+                maxTokens: 320
             )
-            guard let items = parseJSONArray(raw) else { return }
-            for item in items.prefix(5) {
-                _ = MemoryStore.add(item, source: "auto")
-            }
         } catch {
-            // 抽取失败静默忽略，不打断主流程
+            return [] // 失败静默；不推进游标，下轮重试
         }
+
+        guard let ops = parseOps(raw) else {
+            // 解析失败也推进游标，避免卡在同一片段反复请求
+            cursor.processedCount = messages.count
+            cursor.lastAt = .now
+            MemoryStore.setCursor(sessionId, cursor)
+            return []
+        }
+
+        var changes: [MemoryChange] = []
+        for text in ops.add.prefix(5) {
+            if let entry = MemoryStore.add(text, source: "auto") {
+                changes.append(.init(kind: .added, entry: entry))
+            }
+        }
+        for u in ops.update.prefix(5) {
+            guard existing.indices.contains(u.index - 1) else { continue }
+            let target = existing[u.index - 1]
+            // 仅自动来源可被自动更新；手动条目不被改写
+            guard target.source == "auto" else { continue }
+            if let entry = MemoryStore.update(id: target.id, text: u.text) {
+                changes.append(.init(kind: .updated, entry: entry))
+            }
+        }
+
+        cursor.processedCount = messages.count
+        cursor.lastAt = .now
+        MemoryStore.setCursor(sessionId, cursor)
+        return changes
     }
 
-    private static func parseJSONArray(_ raw: String) -> [String]? {
-        // 容错：截取首个 [ ... ]
-        guard let start = raw.firstIndex(of: "["),
-              let end = raw.lastIndex(of: "]"), start < end else { return nil }
+    private static func buildPrompt(existing: [MemoryEntry], dialogue: [(role: String, content: String)]) -> String {
+        let memBlock: String
+        if existing.isEmpty {
+            memBlock = "（暂无）"
+        } else {
+            memBlock = existing.enumerated()
+                .map { "\($0.offset + 1)) \($0.element.text)" }
+                .joined(separator: "\n")
+        }
+        var convo = dialogue
+            .map { ($0.role == "user" ? "用户" : "AI") + "：" + $0.content }
+            .joined(separator: "\n")
+        if convo.count > maxDialogueChars { convo = String(convo.suffix(maxDialogueChars)) }
+        return "A=已有记忆：\n\(memBlock)\n\nB=最近对话：\n\(convo)"
+    }
+
+    private struct Ops {
+        var add: [String]
+        var update: [(index: Int, text: String)]
+    }
+
+    private static func parseOps(_ raw: String) -> Ops? {
+        guard let start = raw.firstIndex(of: "{"),
+              let end = raw.lastIndex(of: "}"), start < end else { return nil }
         let slice = String(raw[start...end])
         guard let data = slice.data(using: .utf8),
-              let arr = try? JSONDecoder().decode([String].self, from: data) else { return nil }
-        return arr
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
+              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
+        let add = (obj["add"] as? [Any])?.compactMap { ($0 as? String)?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
+        var updates: [(index: Int, text: String)] = []
+        if let arr = obj["update"] as? [[String: Any]] {
+            for u in arr {
+                let idx = (u["index"] as? Int) ?? Int("\(u["index"] ?? "")")
+                let text = (u["text"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let idx, let text, !text.isEmpty { updates.append((idx, text)) }
+            }
+        }
+        return Ops(add: add, update: updates)
     }
 }
