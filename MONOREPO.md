@@ -8,7 +8,7 @@
 | 路径 | 是什么 | 怎么跑 |
 |------|--------|--------|
 | **`index.html`** | H5 单页 MVP（当前线上验证） | 根目录 `npm run dev` → http://localhost:3000 |
-| **`api/`** + **`server.js`** | DeepSeek 代理（Vercel / 本地共用） | 随 `npm run dev` |
+| **`api/`** + **`server.js`** | 通义千问代理（Vercel / 本地共用） | 随 `npm run dev` |
 | **`prompts/`** | 提示词：`system_production.md`、`chip_system.md`、`history_title_system.md`；契约见 `API_CHAT.md` | `npm run prompt:check`；改 prompt 后 `npm run prompt:sync-ios` |
 | **`evals/`** + **`braintrust/`** | 提示词回归评测 | `npm run eval:yeyu` |
 | **`ios/`** | **SwiftUI 原生 iOS App**（Linear 端改造一期） | `open ios/Yeyu.xcodeproj` |
@@ -20,7 +20,7 @@
 ```bash
 # H5 + 本地 API
 npm install
-export DEEPSEEK_API_KEY="..."
+export DASHSCOPE_API_KEY="..."
 npm run dev
 
 # iOS（SwiftUI）

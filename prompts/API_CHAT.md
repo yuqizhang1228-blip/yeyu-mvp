@@ -10,7 +10,7 @@
 
 ```json
 {
-  "model": "deepseek-chat",
+  "model": "qwen3-max",
   "max_tokens": 500,
   "temperature": 0.7,
   "top_p": 0.9,
@@ -33,7 +33,7 @@
 
 ## 流式（v1.1，iOS 优先）
 
-请求体设 `"stream": true` 时，响应为 **DeepSeek 兼容 SSE**（`text/event-stream`），逐条 `data: {...}`，结束为 `data: [DONE]`。
+请求体设 `"stream": true` 时，响应为 **OpenAI 兼容 SSE**（`text/event-stream`），逐条 `data: {...}`，结束为 `data: [DONE]`。
 
 - 实现：`api/chat.js` 透传上游流
 - iOS：`ChatAPIClient.sendStream`；失败时自动回退非流式 `send`

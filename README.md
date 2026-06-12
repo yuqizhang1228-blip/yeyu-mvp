@@ -1,6 +1,6 @@
 # 夜屿 (Yeyu) - H5 情绪陪伴工具
 
-> 一个基于 DeepSeek AI 的情绪梳理工具，帮你在 10-15 分钟内理清情绪，获得可执行的微行动。
+> 一个基于通义千问 AI 的情绪梳理工具，帮你在 10-15 分钟内理清情绪，获得可执行的微行动。
 
 [在线体验](https://yeyu-mvp.vercel.app/) | [项目文档](https://www.notion.so/夜屿-H5测试版-提示词方案)
 
@@ -30,14 +30,14 @@
 | `index.html` | H5 MVP（Vercel 线上） |
 | `ios/` | SwiftUI 原生 iOS App |
 | `mobile/` | RN 试验稿（已归档） |
-| `api/` | DeepSeek 代理（H5 / App 共用） |
+| `api/` | 通义千问代理（H5 / App 共用） |
 
 ## 技术栈
 
 - **H5**：纯 HTML/CSS/JS，单页面应用
 - **iOS**：SwiftUI + SwiftData（`ios/`，iOS 17+）
-- **后端**：Vercel Serverless Function (`api/chat.js`) 代理 DeepSeek API
-- **AI 模型**：DeepSeek-V3
+- **后端**：Vercel Serverless Function (`api/chat.js`) 代理通义千问 API
+- **AI 模型**：qwen3-max
 - **部署**：H5 → Vercel；App → Xcode / TestFlight
 
 ---
@@ -53,7 +53,7 @@ cd yeyu-mvp
 npm install
 
 # 设置环境变量并启动
-export DEEPSEEK_API_KEY="your-api-key"
+export DASHSCOPE_API_KEY="your-api-key"
 npm run dev
 
 # 打开 http://localhost:3000
@@ -90,7 +90,7 @@ yeyu-mvp/
 ├── index.html          # H5 主页面（含 SYSTEM_PROMPT）
 ├── ios/                # SwiftUI iOS App
 ├── mobile/             # RN 归档（见 ARCHIVED.md）
-├── api/chat.js         # DeepSeek API 代理
+├── api/chat.js         # 通义千问 API 代理
 ├── prompts/            # 提示词版本
 ├── evals/              # Braintrust 评测
 ├── server.js           # 本地 H5 开发服务器

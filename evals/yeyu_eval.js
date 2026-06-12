@@ -12,7 +12,12 @@ import { Eval, startSpan } from "braintrust";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DEEPSEEK_URL = "https://api.deepseek.com/v1/chat/completions";
+const DASHSCOPE_BASE_URL = (
+  process.env.DASHSCOPE_BASE_URL ||
+  "https://ws-ejtv8grbnjqdnirb.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+).replace(/\/$/, "");
+const CHAT_URL = `${DASHSCOPE_BASE_URL}/chat/completions`;
+const DEFAULT_MODEL = process.env.DASHSCOPE_MODEL || "qwen3-max";
 
 function readJsonl(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");
@@ -138,30 +143,30 @@ const cardOnlyOnceScore = ({ output, expected }) => {
   return { name: "卡片仅出现一次", score: matches.length === 1 ? 1 : 0, metadata: { count: matches.length } };
 };
 
-// ---- LLM Judge scorer (DeepSeek) ----
+// ---- LLM Judge scorer (通义千问) ----
 function buildJudgePrompt(outputText) {
   return `你是一个严格但公平的评审。你要评估“夜屿（夜屿小岛守夜人）”这条回复的质量。\n只评估 assistant 输出本身，不要脑补用户其他信息。\n\n你只需要评估两件事：\n1) 人感：是否像冷静成熟、可信赖的人，而不是客服/模板/说明书。\n2) 推进质量：是否有一个自然、具体、不过度逼迫的推进（通常是一个问题；如果不适合提问，也要有合理承接）。\n\n【硬性扣分雷区】出现任意一条，等级最多只能给 C：\n- 鸡汤/空话（如“你已经做得很好了”“一切都会好的”“加油”“抱抱”等）\n- 连问两个或以上问题（多个问号/多个问题句）\n- 明显模板化套话（泛泛共情 + 泛泛追问）\n\n请在 A/B/C/D 四个等级中选一个：\n- A：非常像人 + 推进自然具体\n- B：整体不错，但略模板/推进略弱\n- C：人感弱或推进不自然（或触发扣分雷区）\n- D：明显不合格（强模板/强鸡汤/强连问/不推进）\n\n输出格式：只输出一个 JSON（不要任何额外文字）：\n{\n  \"grade\": \"A|B|C|D\",\n  \"reasons\": [\n    \"引用 assistant 输出中的一个具体片段作为证据\",\n    \"再引用一个具体片段作为证据\"\n  ]\n}\n\nassistant 输出：\n---\n${outputText}\n---\n`;
 }
 
-async function deepseekChat({ apiKey, messages, temperature = 0.7, top_p = 0.9, max_tokens = 500, model = "deepseek-chat" }) {
-  const resp = await fetch(DEEPSEEK_URL, {
+async function dashscopeChat({ apiKey, messages, temperature = 0.7, top_p = 0.9, max_tokens = 500, model = DEFAULT_MODEL }) {
+  const resp = await fetch(CHAT_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({ model, temperature, top_p, max_tokens, messages }),
   });
   const data = await resp.json();
   if (!resp.ok) {
-    const msg = data?.error?.message || data?.error || `DeepSeek ${resp.status}`;
+    const msg = data?.error?.message || data?.error || `DashScope ${resp.status}`;
     throw new Error(msg);
   }
   return data?.choices?.[0]?.message?.content ?? "";
 }
 
 const llmJudgeScore = async ({ output }) => {
-  const apiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
+  const apiKey = (process.env.DASHSCOPE_API_KEY || "").trim();
   if (!apiKey) return null;
   const out = toText(output).slice(0, 6000); // avoid runaway cost
-  const judge = await deepseekChat({
+  const judge = await dashscopeChat({
     apiKey,
     temperature: 0,
     top_p: 1,
@@ -193,10 +198,10 @@ const llmJudgeScore = async ({ output }) => {
   };
 };
 
-// ---- Task: call DeepSeek with our messages ----
+// ---- Task: call 通义千问 with our messages ----
 async function taskFn(input) {
-  const apiKey = (process.env.DEEPSEEK_API_KEY || "").trim();
-  if (!apiKey) throw new Error("DEEPSEEK_API_KEY 未设置");
+  const apiKey = (process.env.DASHSCOPE_API_KEY || "").trim();
+  if (!apiKey) throw new Error("DASHSCOPE_API_KEY 未设置");
 
   const systemPrompt = readSystemPrompt(path.join(__dirname, "..", "prompts", "system_production.md"));
   const timeInfo = "【当前时间】现在是深夜（适合更轻更静的语气，行动建议避免打电话）";
@@ -239,7 +244,7 @@ async function taskFn(input) {
       const t0 = Date.now();
       try {
         history.push({ role: "user", content: String(turn.content ?? "") });
-        lastAssistant = await deepseekChat({ apiKey, messages: history });
+        lastAssistant = await dashscopeChat({ apiKey, messages: history });
         history.push({ role: "assistant", content: lastAssistant });
         assistantTurns.push({ role: "assistant", content: lastAssistant });
 
@@ -281,15 +286,15 @@ async function main() {
 
   // Debug (safe): show presence/length only, never print secrets
   const btKeyLen = (process.env.BRAINTRUST_API_KEY ? String(process.env.BRAINTRUST_API_KEY) : "").trim().length;
-  const dsKeyLen = (process.env.DEEPSEEK_API_KEY ? String(process.env.DEEPSEEK_API_KEY) : "").trim().length;
+  const dsKeyLen = (process.env.DASHSCOPE_API_KEY ? String(process.env.DASHSCOPE_API_KEY) : "").trim().length;
   console.log(`[env] BRAINTRUST_API_KEY length: ${btKeyLen}`);
-  console.log(`[env] DEEPSEEK_API_KEY length: ${dsKeyLen}`);
+  console.log(`[env] DASHSCOPE_API_KEY length: ${dsKeyLen}`);
 
   if (!process.env.BRAINTRUST_API_KEY || !String(process.env.BRAINTRUST_API_KEY).trim()) {
     throw new Error("BRAINTRUST_API_KEY 未设置：请在项目根目录的 .env.local 中设置");
   }
-  if (!process.env.DEEPSEEK_API_KEY || !String(process.env.DEEPSEEK_API_KEY).trim()) {
-    throw new Error("DEEPSEEK_API_KEY 未设置：请在项目根目录的 .env.local 中设置");
+  if (!process.env.DASHSCOPE_API_KEY || !String(process.env.DASHSCOPE_API_KEY).trim()) {
+    throw new Error("DASHSCOPE_API_KEY 未设置：请在项目根目录的 .env.local 中设置");
   }
 
   const datasetPath =
@@ -326,7 +331,7 @@ async function main() {
       llmJudgeScore,
     ],
     metadata: {
-      model: "deepseek-chat",
+      model: DEFAULT_MODEL,
       prompt_source: "prompts/system_production.md",
       dataset: path.basename(datasetPath),
     },

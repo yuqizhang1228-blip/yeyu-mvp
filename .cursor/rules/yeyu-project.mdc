@@ -28,7 +28,7 @@ alwaysApply: true
 
 ### H5 MVP
 - 前端：纯 HTML5 + CSS3 + 原生 JS，**单文件** `index.html`
-- AI：`deepseek-chat`，temperature=0.7，top_p=0.9，max_tokens=500
+- AI：`qwen3-max`（通义千问 Max），temperature=0.7，top_p=0.9，max_tokens=500
 - API：`api/chat.js`（Vercel / `server.js` 本地）
 - 数据：`localStorage`（无服务端库）
 - 部署：https://yeyu-mvp.vercel.app/
