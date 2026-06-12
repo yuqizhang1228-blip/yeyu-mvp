@@ -69,7 +69,7 @@ struct ChatAPIClient {
         return content
     }
 
-    /// 消费 DeepSeek 兼容 SSE（经 `/api/chat` 透传）
+    /// 消费 OpenAI 兼容 SSE（经 `/api/chat` 透传）
     func sendStream(
         messages: [APIMessage],
         systemPrompt: String,
@@ -133,7 +133,7 @@ struct ChatAPIClient {
         payload.append(contentsOf: messages)
 
         return ChatRequest(
-            model: "deepseek-v4-pro",
+            model: "qwen3-max",
             messages: payload,
             temperature: 0.7,
             max_tokens: maxTokens,
